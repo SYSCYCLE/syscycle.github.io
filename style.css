@@ -1,0 +1,42 @@
+body {
+	background-image: url(./images/bubbles.svg);
+	background-repeat: no-repeat;
+	background-size: 100%;
+}
+
+
+#navbar {
+	position: absolute;
+	top: 200px;
+	left: 0;
+	right: 0;
+	min-height: 300px;
+	max-height: 300px;
+	background-color: #D9D9D9;
+	animation: navbarAnim 15s linear infinite;
+	animation-delay: 5s;
+	border: dotted 3px black;
+	opacity: 0.7;
+}
+
+
+@keyframes navbarAnim {
+	0%{transform: translate(0);}
+	25%{background-color: #F5DDE9;}
+	50%{background-color: #E5F9EE;}
+	75%{}
+	100%{transform: translate(0);}
+}
+
+
+#navbar-container {
+	margin: auto;
+	width: 256px;
+	transform: translateY(220px);
+}
+
+
+
+#navbar-container a:hover {
+	opacity: 0.3;
+}
