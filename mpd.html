@@ -1,12 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="drm" content="true">
-  <title>Korumalı İçerik Örneği</title>
+  <title>Google Widevine CDM Örneği</title>
+  <style>
+    /* Video elementinin genişliğini ve yüksekliğini ayarla */
+    #video {
+      width: 800px;
+      height: 450px;
+    }
+  </style>
 </head>
 <body>
-  <video style="width:100%;height:100%;position:absolute;top:0;left:0" id="video" encryptedMedia></video>
+  <!-- Video elementini oluştur -->
+  <video id="video" controls encryptedMedia></video>
+  <!-- Google Widevine CDM'yi etkinleştir -->
+  <script>
+    // Video elementine eriş
+    var video = document.getElementById("video");
+    // MediaKeySystemAccess nesnesi oluştur
+    var mediaKeySystemAccess = navigator.requestMediaKeySystemAccess("com.widevine.alpha", [{
+      initDataTypes: ["cenc"],
+      audioCapabilities: [{ contentType: "audio/mp4; codecs=\"mp4a.40.2\"" }],
+      videoCapabilities: [{ contentType: "video/mp4; codecs=\"avc1.42E01E\"" }]
+    }]);
+    // MediaKeys nesnesi oluştur
+    mediaKeySystemAccess.then(function(keySystemAccess) {
+      return keySystemAccess.createMediaKeys();
+    }).then(function(createdMediaKeys) {
+      return video.setMediaKeys(createdMediaKeys);
+    }).catch(function(error) {
+      console.error("Google Widevine CDM hatası:", error);
+    });
+  </script>
 </body>
 </html>
