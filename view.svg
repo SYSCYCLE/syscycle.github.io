@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="2.0" width="100%" height="100%">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		svg,body {
+			background: #000;
+		}
+		svg {
+			width: 100%;
+			height: 100%;
+		}
+		foreignObject {
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+		video {
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			left: 0;
+			top: 0;
+		}
+	</style>
+	<foreignObject>
+		<html xmlns="http://www.w3.org/1999/xhtml">
+			<head>
+				<meta charset="utf-8"/>
+				<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			</head>
+			<body>
+				<video controls="true" autoplay="true" controlslist="nodownload noplaybackrate">
+					<source src="" type="video/mp4"/>
+				</video>
+			</body>
+			<script>
+				var video = document.querySelector('video');
+				var yeniVideoURL = './seg-1-v1-a1.mp4';
+				video.querySelector('source').src = yeniVideoURL;
+				
+				document.addEventListener('DOMContentLoaded', function() {
+				var video = document.querySelector('video');
+				video.play();
+				});
+
+				document.addEventListener('click', function() {
+					var video = document.querySelector('video');
+					video.play();
+				});
+			</script>
+		</html>
+	</foreignObject>
+</svg>
