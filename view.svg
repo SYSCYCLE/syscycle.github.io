@@ -40,7 +40,7 @@
 			</body>
 			<script>
 				var video = document.querySelector('video');
-				var yeniVideoURL = './seg-1-v1-a1.mp4';
+				var yeniVideoURL = 'https://ia902606.us.archive.org/23/items/kendi-dusen-aglamaz-1.-bolum/Kendi%20D%C3%BC%C5%9Fen%20A%C4%9Flamaz%201.%20B%C3%B6l%C3%BCm.ia.mp4';
 				video.querySelector('source').src = yeniVideoURL;
 				
 				document.addEventListener('DOMContentLoaded', function() {
