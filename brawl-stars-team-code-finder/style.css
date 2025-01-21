@@ -35,6 +35,7 @@ body {
 	background-color: #007BFF;
 	color: #fff;
 	transition: 300ms all ease;
+	-webkit-tap-highlight-color: transparent;
 }
 #tryButton::before {
 	content: 'Kodu Dene';
