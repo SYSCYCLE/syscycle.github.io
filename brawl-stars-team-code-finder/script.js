@@ -28,17 +28,21 @@ function decrementCode(code) {
 	return codeArray.join("");
 }
 
-teamCodeInput.addEventListener("input", () => {
+function validateInput() {
 	teamCodeInput.value = teamCodeInput.value.toUpperCase();
 
 	if (teamCodeInput.value.toLowerCase() === "help") {
-		window.location.replace("help.html");
+		window.location.replace("https://syscycle.github.io/brawl-stars-team-code-finder/help");
 	} else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
 		tryButton.disabled = false;
 	} else {
 		tryButton.disabled = true;
 	}
-});
+}
+
+document.addEventListener("DOMContentLoaded", validateInput);
+
+teamCodeInput.addEventListener("input", validateInput);
 
 tryButton.addEventListener("click", () => {
 	let teamCode = teamCodeInput.value.toUpperCase();
