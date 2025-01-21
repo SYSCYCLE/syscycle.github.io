@@ -29,11 +29,16 @@ function decrementCode(code) {
 }
 
 teamCodeInput.addEventListener("input", () => {
-	teamCodeInput.value = teamCodeInput.value.toUpperCase();
+	let filteredValue = teamCodeInput.value.toUpperCase()
+	.split('')
+	.filter(c => keyboardOrder.includes(c))
+	.join('');
 
-	if (teamCodeInput.value.toLowerCase() === "help") {
+	teamCodeInput.value = filteredValue;
+
+	if (filteredValue.toLowerCase() === "help") {
 		window.location.replace("help.html");
-	} else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
+	} else if (filteredValue.length >= 2 && filteredValue[0] === 'X') {
 		tryButton.disabled = false;
 	} else {
 		tryButton.disabled = true;
