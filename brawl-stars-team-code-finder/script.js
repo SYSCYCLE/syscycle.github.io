@@ -32,7 +32,7 @@ function validateInput() {
 	teamCodeInput.value = teamCodeInput.value.toUpperCase();
 
 	if (teamCodeInput.value.toLowerCase() === "help") {
-		window.location.replace("https://syscycle.github.io/brawl-stars-team-code-finder/help");
+		window.location.replace("help.html");
 	} else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
 		tryButton.disabled = false;
 	} else {
@@ -40,7 +40,10 @@ function validateInput() {
 	}
 }
 
-document.addEventListener("DOMContentLoaded", validateInput);
+document.addEventListener("DOMContentLoaded", () => {
+	teamCodeInput.value = teamCodeInput.value.toUpperCase();
+	validateInput();
+});
 
 teamCodeInput.addEventListener("input", validateInput);
 
