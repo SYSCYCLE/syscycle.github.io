@@ -3,55 +3,57 @@ const teamCodeInput = document.getElementById("teamcode");
 const tryButton = document.getElementById("tryButton");
 
 function getPreviousChar(char) {
-	const index = keyboardOrder.indexOf(char);
-	if (index === -1) return char;
-	return keyboardOrder[(index - 1 + keyboardOrder.length) % keyboardOrder.length];
+    const index = keyboardOrder.indexOf(char);
+    if (index === -1) return char;
+    return keyboardOrder[(index - 1 + keyboardOrder.length) % keyboardOrder.length];
 }
 
 function decrementCode(code) {
-	let codeArray = code.split("");
-	let carry = true;
+    let codeArray = code.split("");
+    let carry = true;
 
-	for (let i = codeArray.length - 1; i >= 0 && carry; i--) {
-		let currentChar = codeArray[i];
+    for (let i = codeArray.length - 1; i >= 0 && carry; i--) {
+        let currentChar = codeArray[i];
 
-		if (!keyboardOrder.includes(currentChar)) {
-			continue;
-		}
+        if (!keyboardOrder.includes(currentChar)) {
+            continue;
+        }
 
-		let newChar = getPreviousChar(currentChar);
-		codeArray[i] = newChar;
+        let newChar = getPreviousChar(currentChar);
+        codeArray[i] = newChar;
 
-		carry = newChar === keyboardOrder[keyboardOrder.length - 1];
-	}
+        carry = newChar === keyboardOrder[keyboardOrder.length - 1];
+    }
 
-	return codeArray.join("");
+    return codeArray.join("");
 }
 
-function validateInput() {
-	teamCodeInput.value = teamCodeInput.value.toUpperCase();
+document.addEventListener("DOMContentLoaded", function() {
+    function checkInput() {
+        if (teamCodeInput.value.toLowerCase() === "help") {
+            window.location.replace("help.html");
+        } else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
+            tryButton.disabled = false;
+        } else {
+            tryButton.disabled = true;
+        }
+    }
 
-	if (teamCodeInput.value.toLowerCase() === "help") {
-		window.location.replace("help.html");
-	} else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
-		tryButton.disabled = false;
-	} else {
-		tryButton.disabled = true;
-	}
-}
+    // İlk yüklemede input kontrolü
+    checkInput();
 
-document.addEventListener("DOMContentLoaded", () => {
-	teamCodeInput.value = teamCodeInput.value.toUpperCase();
-	validateInput();
+    // Input alanında değişiklik olduğunda kontrol
+    teamCodeInput.addEventListener("input", () => {
+        teamCodeInput.value = teamCodeInput.value.toUpperCase();
+        checkInput();
+    });
 });
 
-teamCodeInput.addEventListener("input", validateInput);
-
 tryButton.addEventListener("click", () => {
-	let teamCode = teamCodeInput.value.toUpperCase();
-	let newCode = decrementCode(teamCode);
-	teamCodeInput.value = newCode;
+    let teamCode = teamCodeInput.value.toUpperCase();
+    let newCode = decrementCode(teamCode);
+    teamCodeInput.value = newCode;
 
-	const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
-	window.location.href = brawlStarsLink;
+    const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
+    window.location.href = brawlStarsLink;
 });
