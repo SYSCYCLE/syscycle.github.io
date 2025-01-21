@@ -1,0 +1,71 @@
+*, ::before, ::after {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	font-family: "Roboto", serif;
+	overflow: hidden;
+}
+html, body {
+	touch-action: none;
+	-webkit-touch-action: none;
+}
+main {
+	width: 100%;
+	height: 300px;
+	background: #202030;
+}
+h1 {
+	color: #fff;
+	text-align: center;
+	padding-top: 25px;
+}
+h1::before {
+	content: var(--dynamic-content, "\0054\0061\006B\0131\006D\0020\0062\0075\006C\0075\0063\0075\0079\0061\0020\0068\006F\015F\0067\0065\006C\0064\0069\006E\0069\007A\002E");
+}
+#go {
+	text-align: center;
+}
+#go::before {
+	content: var(--dynamic-go-content, "");
+	color: #fff;
+	font-weight: bold;
+	font-size: 4rem;
+}
+#pic1-content::before {
+	content: 'Resimdeki gibi bir takım kodu oluşturun.';
+}
+#pic2-content::before {
+	content: 'Ardından takım kodunu bu kısımdan kopyalayın.';
+}
+#pic3-content::before {
+	content: 'Sayfaya geri dönüp kopyaladığınız takım kodunu yapıştırın ve "Kodu Dene" butonuna tıklayın.';
+}
+#pic4-content::before {
+	content: 'Eğer böyle bir yazı görüyorsanız takım daha önce kurulup dağıtılmış demektir.';
+}
+#pic5-content::before {
+	content: 'Böyle bir yazıyla karşılaşırsanız "Kodu Dene" butonuna basmaya devam etmeyin. Çünkü henüz bakım arası boyunca böyle bir takım kodu dizesi daha önce oluşturulmamış demektir.';
+}
+@media screen and (orientation: landscape) {
+	img {
+		width: 100%;
+		height: 100%;
+	}
+}
+.syscycle::before {
+	content: var(--dynamic-image-content, "");
+	display: block;
+	width: 300px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%) var(--dynamic-transform, scaleX(1) scaleY(1));
+	opacity: var(--dynamic-opacity, 0);
+	transition: var(--dynamic-transition, 0ms all ease);
+}

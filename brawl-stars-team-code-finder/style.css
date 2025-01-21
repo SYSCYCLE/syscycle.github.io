@@ -1,0 +1,81 @@
+*, ::before, ::after {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	background-image: url('https://syscycle.github.io/brawl-stars-team-code-finder/lobby.png');
+	background-color: #06232d;
+	background-repeat: no-repeat;
+	background-size: cover;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	overflow: hidden;
+}
+#container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	height: 50%;
+	gap: 10px;
+}
+#tryButton:disabled {
+	background-color: #467;
+	cursor: not-allowed;
+}
+#tryButton {
+	cursor: pointer;
+	border: none;
+	width: 120px;
+	padding: 15px;
+	border-radius: 20px;
+	font-weight: bold;
+	background-color: #007BFF;
+	color: #fff;
+	transition: 300ms all ease;
+}
+#tryButton::before {
+	content: 'Kodu Dene';
+}
+#tryButton:hover {
+	opacity: 0.8;
+	transition: 300ms all ease;
+}
+#teamcode {
+	width: 300px;
+	background: #303030;
+	padding: 15px;
+	text-align: center;
+	border: none;
+	color: #fff;
+	transition: 300ms all ease;
+	font-size: 18px;
+	text-transform: uppercase;
+	border-radius: 10px;
+	overflow: hidden;
+}
+#teamcode::placeholder {
+	color: #fff;
+	opacity: 0.4;
+	transition: 300ms all ease;
+	font-size: 15px;
+	letter-spacing: normal;
+	text-transform: none;
+}
+#teamcode:focus {
+	outline: 2px solid #fff;
+	border-radius: 20px;
+	border: none;
+	transition: 300ms ease all;
+	caret-color: transparent;
+}
+#teamcode:focus::placeholder {
+	color: transparent;
+	transform: translateX(100px);
+	transition: 500ms all ease;
+}
+.logo {
+	display: block;
+}
