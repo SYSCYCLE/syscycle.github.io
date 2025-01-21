@@ -40,10 +40,18 @@ teamCodeInput.addEventListener("input", () => {
 	}
 
 	if (inputValue.startsWith("H")) {
-		inputValue = inputValue
-		.split('')
-		.filter(c => ["H", "E", "L", "P"].includes(c))
-		.join('');
+		let helpSequence = "HELP";
+		let filteredValue = "";
+
+		for (let i = 0; i < inputValue.length; i++) {
+			if (i < helpSequence.length && inputValue[i] === helpSequence[i]) {
+				filteredValue += inputValue[i];
+			} else {
+				break;
+			}
+		}
+
+		inputValue = filteredValue;
 	}
 
 	let filteredValue = inputValue
@@ -51,9 +59,10 @@ teamCodeInput.addEventListener("input", () => {
 	.filter((c, index) => {
 		if (index === 0) return ["X",
 			"H"].includes(c);
-		if (inputValue.startsWith("H")) return ["E",
-			"L",
-			"P"].includes(c);
+		if (inputValue.startsWith("H")) {
+			let expectedChar = "HELP"[index];
+			return c === expectedChar;
+		}
 		return keyboardOrder.includes(c);
 	})
 	.join('');
