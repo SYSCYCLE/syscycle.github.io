@@ -31,6 +31,10 @@ function decrementCode(code) {
 teamCodeInput.addEventListener("input", () => {
 	let inputValue = teamCodeInput.value.toUpperCase();
 
+	if (inputValue.length > 0 && !["X", "H"].includes(inputValue[0])) {
+		inputValue = inputValue.replace(/[^XH]/, "");
+	}
+
 	if ((inputValue.match(/X/g) || []).length > 1) {
 		inputValue = "X" + inputValue.replace(/X/g, "");
 	}
@@ -38,7 +42,8 @@ teamCodeInput.addEventListener("input", () => {
 	let filteredValue = inputValue
 	.split('')
 	.filter((c, index) => {
-		if (index === 0) return c === "X";
+		if (index === 0) return ["X",
+			"H"].includes(c);
 		return keyboardOrder.includes(c);
 	})
 	.join('');
@@ -47,7 +52,7 @@ teamCodeInput.addEventListener("input", () => {
 
 	if (filteredValue.toLowerCase() === "help") {
 		window.location.replace("help.html");
-	} else if (filteredValue.length >= 2 && filteredValue[0] === 'X') {
+	} else if (filteredValue.length >= 2 && ["X", "H"].includes(filteredValue[0])) {
 		tryButton.disabled = false;
 	} else {
 		tryButton.disabled = true;
