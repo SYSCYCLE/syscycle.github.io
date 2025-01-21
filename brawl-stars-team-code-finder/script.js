@@ -2,33 +2,52 @@ const keyboardOrder = "Q,W,E,R,T,Y,U,P,A,S,D,F,G,H,J,K,L,Z,C,V,B,N,M,2,3,4,5,6,7
 const teamCodeInput = document.getElementById("teamcode");
 const tryButton = document.getElementById("tryButton");
 
-// ... getPreviousChar ve decrementCode fonksiyonları aynı ...
-
-// Buton durumunu kontrol eden fonksiyon
-function updateButtonState() {
-    const value = teamCodeInput.value.toUpperCase();
-    tryButton.disabled = !(value.length >= 2 && value[0] === 'X');
+function getPreviousChar(char) {
+	const index = keyboardOrder.indexOf(char);
+	if (index === -1) return char;
+	return keyboardOrder[(index - 1 + keyboardOrder.length) % keyboardOrder.length];
 }
 
-// Input değiştiğinde
+function decrementCode(code) {
+	let codeArray = code.split("");
+	let carry = true;
+
+	for (let i = codeArray.length - 1; i >= 0 && carry; i--) {
+		let currentChar = codeArray[i];
+
+		if (!keyboardOrder.includes(currentChar)) {
+			continue;
+		}
+
+		let newChar = getPreviousChar(currentChar);
+		codeArray[i] = newChar;
+
+		carry = newChar === keyboardOrder[keyboardOrder.length - 1];
+	}
+
+	return codeArray.join("");
+}
+
 teamCodeInput.addEventListener("input", () => {
-    teamCodeInput.value = teamCodeInput.value.toUpperCase(); // Büyük harfe çevir
-    
-    if (teamCodeInput.value.toLowerCase() === "help") {
-        window.location.replace("help.html");
-        return;
-    }
-    
-    updateButtonState(); // Butonu güncelle
+	teamCodeInput.value = teamCodeInput.value.toUpperCase();
+
+	if (teamCodeInput.value.toLowerCase() === "help") {
+		window.location.replace("help.html");
+	} else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
+		tryButton.disabled = false;
+	} else {
+		tryButton.disabled = true;
+	}
 });
 
-// Sayfa yüklendiğinde veya tarayıcıdan geri gelindiğinde (kritik çözüm)
-window.addEventListener('load', updateButtonState);
-window.addEventListener('pageshow', (e) => e.persisted && updateButtonState());
-
-// Try butonu kodu aynı
 tryButton.addEventListener("click", () => {
-    const newCode = decrementCode(teamCodeInput.value.toUpperCase());
-    teamCodeInput.value = newCode;
-    window.location.href = `brawlstars://joinRoom?tag=${newCode}`;
+	let teamCode = teamCodeInput.value.toUpperCase();
+	let newCode = decrementCode(teamCode);
+	teamCodeInput.value = newCode;
+
+	const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
+	window.location.href = brawlStarsLink;
 });
+
+window.addEventListener("pageshow", () => teamCodeInput.dispatchEvent(new Event("input")));
+window.addEventListener("load", () => teamCodeInput.dispatchEvent(new Event("input")));
