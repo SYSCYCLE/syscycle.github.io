@@ -2,32 +2,33 @@ const keyboardOrder = "Q,W,E,R,T,Y,U,P,A,S,D,F,G,H,J,K,L,Z,C,V,B,N,M,2,3,4,5,6,7
 const teamCodeInput = document.getElementById("teamcode");
 const tryButton = document.getElementById("tryButton");
 
-// ... getPreviousChar ve decrementCode fonksiyonları aynı kalacak ...
+// ... getPreviousChar ve decrementCode fonksiyonları aynı ...
 
-function checkButtonState() {
-    teamCodeInput.value = teamCodeInput.value.toUpperCase();
-
-    if (teamCodeInput.value.toLowerCase() === "help") {
-        window.location.replace("help.html");
-    } else if (teamCodeInput.value.length >= 2 && teamCodeInput.value[0] === 'X') {
-        tryButton.disabled = false;
-    } else {
-        tryButton.disabled = true;
-    }
+// Buton durumunu kontrol eden fonksiyon
+function updateButtonState() {
+    const value = teamCodeInput.value.toUpperCase();
+    tryButton.disabled = !(value.length >= 2 && value[0] === 'X');
 }
 
-// Event listener'lar
-document.addEventListener('DOMContentLoaded', checkButtonState);
-window.addEventListener('pageshow', function(event) {
-    if (event.persisted) checkButtonState();
+// Input değiştiğinde
+teamCodeInput.addEventListener("input", () => {
+    teamCodeInput.value = teamCodeInput.value.toUpperCase(); // Büyük harfe çevir
+    
+    if (teamCodeInput.value.toLowerCase() === "help") {
+        window.location.replace("help.html");
+        return;
+    }
+    
+    updateButtonState(); // Butonu güncelle
 });
-teamCodeInput.addEventListener("input", checkButtonState);
 
-// Try butonu click handler'ı aynı kalacak
+// Sayfa yüklendiğinde veya tarayıcıdan geri gelindiğinde (kritik çözüm)
+window.addEventListener('load', updateButtonState);
+window.addEventListener('pageshow', (e) => e.persisted && updateButtonState());
+
+// Try butonu kodu aynı
 tryButton.addEventListener("click", () => {
-    let teamCode = teamCodeInput.value.toUpperCase();
-    let newCode = decrementCode(teamCode);
+    const newCode = decrementCode(teamCodeInput.value.toUpperCase());
     teamCodeInput.value = newCode;
-    const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
-    window.location.href = brawlStarsLink;
+    window.location.href = `brawlstars://joinRoom?tag=${newCode}`;
 });
