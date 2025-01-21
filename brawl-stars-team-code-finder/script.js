@@ -31,14 +31,6 @@ function decrementCode(code) {
 teamCodeInput.addEventListener("input", () => {
 	let inputValue = teamCodeInput.value.toUpperCase();
 
-	if (inputValue.length === 1 && inputValue[0] === "H") {
-		inputValue = "HELP";
-	}
-
-	if (inputValue.startsWith("H") && inputValue !== "HELP") {
-		inputValue = "HELP";
-	}
-
 	if (inputValue.length > 0 && !["X", "H"].includes(inputValue[0])) {
 		inputValue = inputValue.replace(/[^XH]/, "");
 	}
@@ -47,12 +39,21 @@ teamCodeInput.addEventListener("input", () => {
 		inputValue = "X" + inputValue.replace(/X/g, "");
 	}
 
+	if (inputValue.startsWith("H")) {
+		inputValue = inputValue
+		.split('')
+		.filter(c => ["H", "E", "L", "P"].includes(c))
+		.join('');
+	}
+
 	let filteredValue = inputValue
 	.split('')
 	.filter((c, index) => {
 		if (index === 0) return ["X",
 			"H"].includes(c);
-		if (inputValue.startsWith("H")) return "ELP".includes(c);
+		if (inputValue.startsWith("H")) return ["E",
+			"L",
+			"P"].includes(c);
 		return keyboardOrder.includes(c);
 	})
 	.join('');
