@@ -32,7 +32,7 @@ teamCodeInput.addEventListener("input", () => {
 	let inputValue = teamCodeInput.value.toUpperCase();
 
 	if (inputValue.length > 0 && !["X", "H"].includes(inputValue[0])) {
-		inputValue = inputValue.replace(/[^XH]/, "");
+		inputValue = inputValue.replace(/[^XH]/, ""); // İlk karakter "X" veya "H" değilse sil
 	}
 
 	if ((inputValue.match(/X/g) || []).length > 1) {
@@ -71,7 +71,7 @@ teamCodeInput.addEventListener("input", () => {
 
 	if (filteredValue.toLowerCase() === "help") {
 		window.location.replace("help.html");
-	} else if (filteredValue.length >= 2 && ["X", "H"].includes(filteredValue[0])) {
+	} else if (filteredValue.startsWith("X") && filteredValue.length >= 2) {
 		tryButton.disabled = false;
 	} else {
 		tryButton.disabled = true;
