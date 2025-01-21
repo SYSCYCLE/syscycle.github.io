@@ -1,0 +1,19 @@
+{
+	"name": "Brawl Stars Team Code Finder Gadget",
+	"short_name": "Brawl Stars Team Finder Gadget",
+	"icons": [{
+		"src": "https://syscycle.github.io/brawl-stars-team-code-finder/gadget/web-app-manifest-192x192.png",
+		"sizes": "192x192",
+		"type": "image/png",
+		"purpose": "maskable"
+	},
+		{
+			"src": "https://syscycle.github.io/brawl-stars-team-code-finder/gadget/web-app-manifest-512x512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}],
+	"theme_color": "transparent",
+	"background_color": "transparent",
+	"display": "standalone"
+}
