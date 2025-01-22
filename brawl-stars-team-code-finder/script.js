@@ -82,11 +82,6 @@ tryButton.addEventListener("click", () => {
 	let teamCode = teamCodeInput.value.toUpperCase();
 	let newCode = decrementCode(teamCode);
 	teamCodeInput.value = newCode;
-	
-	tryButton.style.pointerEvents = 'none';
-	setTimeout(() => {
-		tryButton.style.pointerEvents = 'auto';
-	}, 180);
 
 	const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
 	window.location.href = brawlStarsLink;
