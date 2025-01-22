@@ -1,7 +1,6 @@
 const keyboardOrder = "Q,W,E,R,T,Y,U,P,A,S,D,F,G,H,J,K,L,Z,C,V,B,N,M,2,3,4,5,6,7,8,9".split(",");
 const teamCodeInput = document.getElementById("teamcode");
 const tryButton = document.getElementById("tryButton");
-let cooldownActive = false;
 
 function getPreviousChar(char) {
 	const index = keyboardOrder.indexOf(char);
@@ -73,12 +72,13 @@ teamCodeInput.addEventListener("input", () => {
 	if (filteredValue.toLowerCase() === "help") {
 		window.location.replace("help.html");
 	} else {
-		const isInputValid = filteredValue.startsWith("X") && filteredValue.length >= 2;
-		tryButton.disabled = !isInputValid || cooldownActive;
+		tryButton.disabled = !(filteredValue.startsWith("X") && filteredValue.length >= 2);
 	}
 });
 
 tryButton.addEventListener("click", () => {
+	tryButton.disabled = true;
+
 	let teamCode = teamCodeInput.value.toUpperCase();
 	let newCode = decrementCode(teamCode);
 	teamCodeInput.value = newCode;
@@ -86,11 +86,8 @@ tryButton.addEventListener("click", () => {
 	const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
 	window.location.href = brawlStarsLink;
 
-	cooldownActive = true;
-	tryButton.disabled = true;
-
 	setTimeout(() => {
-		cooldownActive = false;
+		tryButton.disabled = false;
 		teamCodeInput.dispatchEvent(new Event('input'));
 	}, 400);
 });
