@@ -1,6 +1,7 @@
 const keyboardOrder = "Q,W,E,R,T,Y,U,P,A,S,D,F,G,H,J,K,L,Z,C,V,B,N,M,2,3,4,5,6,7,8,9".split(",");
 const teamCodeInput = document.getElementById("teamcode");
 const tryButton = document.getElementById("tryButton");
+let cooldownActive = false;
 
 function getPreviousChar(char) {
 	const index = keyboardOrder.indexOf(char);
@@ -32,7 +33,7 @@ teamCodeInput.addEventListener("input", () => {
 	let inputValue = teamCodeInput.value.toUpperCase();
 
 	if (inputValue.length > 0 && !["X", "H"].includes(inputValue[0])) {
-		inputValue = inputValue.replace(/[^XH]/, ""); // İlk karakter "X" veya "H" değilse sil
+		inputValue = inputValue.replace(/[^XH]/, "");
 	}
 
 	if ((inputValue.match(/X/g) || []).length > 1) {
@@ -71,10 +72,9 @@ teamCodeInput.addEventListener("input", () => {
 
 	if (filteredValue.toLowerCase() === "help") {
 		window.location.replace("help.html");
-	} else if (filteredValue.startsWith("X") && filteredValue.length >= 2) {
-		tryButton.disabled = false;
 	} else {
-		tryButton.disabled = true;
+		const isInputValid = filteredValue.startsWith("X") && filteredValue.length >= 2;
+		tryButton.disabled = !isInputValid || cooldownActive;
 	}
 });
 
@@ -85,6 +85,14 @@ tryButton.addEventListener("click", () => {
 
 	const brawlStarsLink = `brawlstars://joinRoom?tag=${newCode}`;
 	window.location.href = brawlStarsLink;
+
+	cooldownActive = true;
+	tryButton.disabled = true;
+
+	setTimeout(() => {
+		cooldownActive = false;
+		teamCodeInput.dispatchEvent(new Event('input'));
+	}, 400);
 });
 
 window.addEventListener("pageshow", () => teamCodeInput.dispatchEvent(new Event("input")));
