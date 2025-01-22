@@ -89,7 +89,7 @@ tryButton.addEventListener("click", () => {
 	setTimeout(() => {
 		tryButton.disabled = false;
 		teamCodeInput.dispatchEvent(new Event('input'));
-	}, 400);
+	}, 2000);
 });
 
 window.addEventListener("pageshow", () => teamCodeInput.dispatchEvent(new Event("input")));
