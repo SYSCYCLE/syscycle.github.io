@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Connected2.me - Uygulamada Aç</title>
+	<style>
+		:root {
+			--primary-color: #30207a;
+			--primary-hover: #24185c;
+			--background-color: #303030;
+			--card-background: #212121;
+			--text-color: #cfcfcf;
+			--input-background: #3a3a3a;
+			--border-color: #444;
+			--success-color: #4CAF50;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			background-color: var(--background-color);
+			padding: 20px;
+			color: var(--text-color);
+			line-height: 1.5;
+		}
+
+		.container {
+			width: 100%;
+			max-width: 450px;
+			background-color: var(--card-background);
+			padding: 30px;
+			border-radius: 12px;
+			box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+			text-align: center;
+		}
+
+		.logo {
+			width: 80px;
+			height: 80px;
+			margin: 0 auto 20px;
+			background-color: var(--primary-color);
+			border-radius: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: white;
+			font-weight: bold;
+			font-size: 24px;
+		}
+
+		h1 {
+			margin-bottom: 10px;
+			color: white;
+			font-size: 24px;
+		}
+
+		.description {
+			margin-bottom: 25px;
+			color: var(--text-color);
+			font-size: 16px;
+		}
+
+		.input-group {
+			margin-bottom: 20px;
+			text-align: left;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: 500;
+		}
+
+		#usernameInput {
+			width: 100%;
+			padding: 14px;
+			background-color: var(--input-background);
+			color: var(--text-color);
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			font-size: 16px;
+			transition: border-color 0.3s, box-shadow 0.3s;
+		}
+
+		#usernameInput:focus {
+			outline: none;
+			border-color: var(--primary-color);
+			box-shadow: 0 0 0 2px rgba(48, 32, 122, 0.2);
+		}
+
+		#redirectButton {
+			width: 100%;
+			padding: 14px;
+			background-color: var(--primary-color);
+			color: white;
+			border: none;
+			border-radius: 8px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background-color 0.3s ease, transform 0.1s;
+		}
+
+		#redirectButton:hover {
+			background-color: var(--primary-hover);
+		}
+
+		#redirectButton:active {
+			transform: scale(0.98);
+		}
+
+		.footer {
+			margin-top: 25px;
+			font-size: 14px;
+			color: #888;
+		}
+
+		.app-store-links {
+			display: flex;
+			justify-content: center;
+			gap: 15px;
+			margin-top: 20px;
+		}
+
+		.store-link {
+			display: inline-block;
+			padding: 10px 15px;
+			background-color: rgba(255, 255, 255, 0.1);
+			border-radius: 6px;
+			color: var(--text-color);
+			text-decoration: none;
+			font-size: 14px;
+			transition: background-color 0.3s;
+		}
+
+		.store-link:hover {
+			background-color: rgba(255, 255, 255, 0.15);
+		}
+
+@media (max-width: 480px) {
+			.container {
+				padding: 25px 20px;
+			}
+
+			h1 {
+				font-size: 22px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="logo">
+			C2M
+		</div>
+		<h1>Uygulamada Aç</h1>
+		<p class="description">
+			Bağlanmak istediğiniz Connected2.me kullanıcı adını girin
+		</p>
+
+		<div class="input-group">
+			<label for="usernameInput">Kullanıcı Adı</label>
+			<input type="text" id="usernameInput" placeholder="Kullanıcı adını yazın..." autocomplete="off" autofocus>
+		</div>
+
+		<button id="redirectButton">Connected2.me'de Aç</button>
+
+
+		<div class="app-store-links">
+			<a href="https://play.google.com/store/apps/details?id=com.connected2.c2m" class="store-link" target="_blank">Google Play</a>
+			<a href="https://apps.apple.com/app/connected2-me/id6472323666" class="store-link" target="_blank">App Store</a>
+		</div>
+
+		<div class="footer">
+			Uygulama yüklü değilse yukarıdaki mağaza bağlantılarını kullanın
+		</div>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			const usernameInput = document.getElementById('usernameInput');
+			const redirectButton = document.getElementById('redirectButton');
+			const successMessage = document.getElementById('successMessage');
+
+			usernameInput.addEventListener('keypress', function(e) {
+				if (e.key === 'Enter') {
+					redirectToApp();
+				}
+			});
+
+			redirectButton.addEventListener('click',
+				redirectToApp);
+
+			function redirectToApp() {
+				const username = usernameInput.value.trim();
+
+				if (!username) {
+					alert('Lütfen bir kullanıcı adı girin.');
+					usernameInput.focus();
+					return;
+				}
+
+				usernameInput.value = '';
+
+				const appUrl = `com.connected2.c2m://chat/${username}`;
+
+				window.location.href = appUrl;
+			}
+		});
+	</script>
+</body>
+</html>
