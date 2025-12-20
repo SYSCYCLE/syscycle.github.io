@@ -4,70 +4,13 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="background: #222; color: white; text-align: center;">
-	<h2>WASM C++ Embedded Video</h2>
-	<!-- Video buraya çizilecek -->
-	<canvas id="vCanvas" width="640" height="360" style="border: 2px solid #555; max-width: 90%;"></canvas>
-	<p id="status">
-		WASM Yükleniyor...
-	</p>
-	<script>
-    var Module = {
-        // WASM dosyasını MIME tipine takılmadan yüklemek için en sağlam yöntem (Blob)
-        instantiateWasm: function(imports, successCallback) {
-            fetch('index.wasm')
-                .then(res => res.arrayBuffer())
-                .then(bytes => WebAssembly.instantiate(bytes, imports))
-                .then(results => successCallback(results.instance))
-                .catch(err => console.error("WASM Yükleme Hatası:", err));
-            return {};
-        },
-        onRuntimeInitialized: function() {
-            console.log("WASM Hazır, Belleğe erişiliyor...");
-            
-            try {
-                // Belleğe erişmek için 3 farklı yolu da deniyoruz (Android/Chrome uyumluluğu)
-                const heap = Module.HEAPU8 || (Module.asm && Module.asm.memory && new Uint8Array(Module.asm.memory.buffer));
-                
-                if (!heap) {
-                    throw new Error("WASM belleğine erişilemedi! (HEAPU8 undefined)");
-                }
+<body style="background:#000; text-align:center; color:white; font-family:sans-serif;">
+	<h3>WASM Gömülü Video</h3>
+	<canvas id="vCanvas" width="640" height="360" style="border:1px solid #333; max-width:100%;"></canvas>
+	<div id="status">
+		Yükleniyor...
+	</div>
 
-                const ptr = Module._get_video_data();
-                const size = Module._get_video_size();
-                
-                // Veriyi kopyalıyoruz
-                const videoData = new Uint8Array(heap.buffer, ptr, size);
-                
-                const blob = new Blob([videoData], { type: 'video/mp4' });
-                const videoUrl = URL.createObjectURL(blob);
-                
-                const v = document.createElement('video');
-                v.src = videoUrl;
-                v.loop = true;
-                v.muted = true;
-                v.setAttribute('playsinline', ''); // Mobil tarayıcılar için kritik
-                v.play();
-
-                const canvas = document.getElementById('vCanvas');
-                const ctx = canvas.getContext('2d');
-                
-                function step() {
-                    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-                    requestAnimationFrame(step);
-                }
-                
-                v.onplay = () => {
-                    console.log("Video oynatılıyor!");
-                    step();
-                };
-            } catch (e) {
-                console.error("JavaScript Hatası:", e.message);
-            }
-        }
-    };
-</script>
-<script src="index.js"></script>
 	<script src="index.js"></script>
 </body>
 </html>
