@@ -1,1 +1,14 @@
-![Test](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iNTAiPjxtZXRhIGNoYXJzZXQ9InV0Zi04Ii8+PGZvcmVpZ25PYmplY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSI+PGRpdiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCIgc3R5bGU9ImJhY2tncm91bmQ6cmVkO2NvbG9yOndoaXRlO3RleHQtYWxpZ246Y2VudGVyOyI+TWVyaGFiYSBEdW55YSE8L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9zdmc+)
+<!-- 1. Canvas etiketini tanımlıyoruz -->
+<canvas id="denemeCanvas" width="200" height="100" style="border:1px solid #d3d3d3;">
+  Tarayıcınız canvas desteği sunmuyor.
+</canvas>
+
+<!-- 2. İçine bir şeyler çizmek için gereken script -->
+<script>
+  var c = document.getElementById("denemeCanvas");
+  var ctx = c.getContext("2d");
+  ctx.moveTo(0, 0);
+  ctx.lineTo(200, 100);
+  ctx.strokeStyle = "#FF0000";
+  ctx.stroke();
+</script>
