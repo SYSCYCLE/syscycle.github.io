@@ -1,0 +1,5 @@
+{
+  "name": "Wasm Forge: Pro Byte Converter",
+  "description": "A professional-grade WebAssembly to JavaScript byte array converter with advanced formatting, file analysis, and AI-powered insights.",
+  "requestFramePermissions": []
+}
