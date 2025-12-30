@@ -41,10 +41,7 @@
                 setStatus("İŞLENİYOR...");
                 
                 try {
-                    // Boşlukla ayrılmış saf veri dizisi oluşturma
                     const rawContent = fileData.bytes.join(' ');
-
-                    // MODERN YÖNTEM
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(rawContent)
                             .then(() => {
@@ -60,13 +57,10 @@
                     alert("Dosya telefonun kopyalama kapasitesi için çok büyük!");
                 }
             };
-
-            // ESKİ AMA GARANTİ YÖNTEM (Hata vermez)
             const fallbackCopy = (text) => {
                 try {
                     const textArea = document.createElement("textarea");
                     textArea.value = text;
-                    // Ekrandan gizle
                     textArea.style.position = "fixed";
                     textArea.style.left = "-9999px";
                     textArea.style.top = "0";
@@ -91,8 +85,6 @@
                             <h1 className="text-3xl font-black tracking-tighter text-white">RAW CONVERTER</h1>
                             <div className="h-1 w-20 bg-red-600 mx-auto mt-2"></div>
                         </div>
-
-                        {/* DOSYA SEÇME */}
                         <label className="block mb-8 cursor-pointer group">
                             <input type="file" onChange={handleFile} className="hidden" />
                             <div className="bg-[#1a1a1a] border-2 border-dashed border-[#333] group-hover:border-red-600 p-12 rounded-2xl text-center transition-all">
@@ -113,8 +105,6 @@
                                         {fileData.bytes.slice(0, 80).join(' ')} ...
                                     </div>
                                 </div>
-
-                                {/* DEV KOPYALAMA BUTONU */}
                                 <button 
                                     onClick={copyToClipboard}
                                     className={`w-full py-6 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-xl ${
@@ -125,10 +115,6 @@
                                 >
                                     {status}
                                 </button>
-
-                                <p className="text-[10px] text-center text-gray-600 mt-6 uppercase tracking-[0.2em] font-bold">
-                                    Saf Veri (Boşluklu) Format
-                                </p>
                             </div>
                         )}
                     </div>
