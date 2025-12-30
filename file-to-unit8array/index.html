@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uint8Array Converter (Limitsiz)</title>
+    <title>Uint8Array Converter</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -72,7 +72,6 @@
             const copyToClipboard = () => {
                 if (!uint8Array) return;
                 try {
-                    // Büyük verilerde donmayı önlemek için işlem başlatılıyor
                     const arrayString = JSON.stringify(Array.from(uint8Array));
                     navigator.clipboard.writeText(arrayString)
                         .then(() => setCopyStatus('success'))
@@ -88,7 +87,6 @@
                     <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden">
                         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 text-center text-white">
                             <h1 className="text-2xl font-bold">File to Uint8Array</h1>
-                            <p className="opacity-80 text-sm mt-2 font-medium underline">Sınır Kaldırıldı</p>
                             <p className="text-[10px] mt-1 text-purple-200 text-center">Uyarı: Çok büyük dosyalar cihazınızı dondurabilir.</p>
                         </div>
                         
