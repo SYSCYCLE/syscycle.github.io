@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uint8Array Converter (Limitsiz)</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { File, Copy, Check, AlertCircle } = lucide;
+
+        function App() {
+            const [selectedFile, setSelectedFile] = useState(null);
+            const [uint8Array, setUint8Array] = useState(null);
+            const [preview, setPreview] = useState('');
+            const [copyStatus, setCopyStatus] = useState(null);
+            const [error, setError] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+                if (copyStatus) {
+                    const timer = setTimeout(() => setCopyStatus(null), 2000);
+                    return () => clearTimeout(timer);
+                }
+            }, [copyStatus]);
+
+            useEffect(() => {
+                if (uint8Array) {
+                    const arr = Array.from(uint8Array.slice(0, 100));
+                    setPreview(JSON.stringify(arr).slice(0, -1) + (uint8Array.length > 100 ? ', ...]' : ']'));
+                } else { setPreview(''); }
+            }, [uint8Array]);
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                setSelectedFile(file);
+                setUint8Array(null);
+                setError(null);
+                setLoading(true);
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const uint8Arr = new Uint8Array(event.target.result);
+                        setUint8Array(uint8Arr);
+                    } catch (err) {
+                        setError('Dosya işlenirken bellek hatası oluştu. Dosya çok büyük olabilir.');
+                    }
+                    setLoading(false);
+                };
+                reader.onerror = () => {
+                    setError('Dosya okunurken hata oluştu.');
+                    setLoading(false);
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            const copyToClipboard = () => {
+                if (!uint8Array) return;
+                try {
+                    // Büyük verilerde donmayı önlemek için işlem başlatılıyor
+                    const arrayString = JSON.stringify(Array.from(uint8Array));
+                    navigator.clipboard.writeText(arrayString)
+                        .then(() => setCopyStatus('success'))
+                        .catch(() => setCopyStatus('error'));
+                } catch (err) {
+                    setCopyStatus('error');
+                    alert('Hata: Dosya içeriği kopyalamak için çok büyük!');
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+                    <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 text-center text-white">
+                            <h1 className="text-2xl font-bold">File to Uint8Array</h1>
+                            <p className="opacity-80 text-sm mt-2 font-medium underline">Sınır Kaldırıldı</p>
+                            <p className="text-[10px] mt-1 text-purple-200 text-center">Uyarı: Çok büyük dosyalar cihazınızı dondurabilir.</p>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            <div className="relative border-2 border-dashed border-indigo-200 rounded-2xl p-4 bg-indigo-50/50">
+                                <input type="file" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer" />
+                            </div>
+                            
+                            {loading && <div className="text-center text-indigo-600 font-medium animate-pulse">Dosya okunuyor...</div>}
+                            {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{error}</div>}
+                            
+                            {uint8Array && (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                        <span>Önizleme (İlk 100 Bayt)</span>
+                                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px]">{uint8Array.length.toLocaleString()} Bayt</span>
+                                    </div>
+                                    <div className="bg-slate-900 text-green-400 p-4 rounded-xl font-mono text-xs break-all h-32 overflow-auto shadow-inner border border-slate-800">
+                                        {preview}
+                                    </div>
+                                    <button onClick={copyToClipboard} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 active:scale-95 transition-all flex justify-center items-center gap-2">
+                                        {copyStatus === 'success' ? (
+                                            <><Check size={20} /> Kopyalandı!</>
+                                        ) : (
+                                            <><Copy size={20} /> Tümünü Kopyala (JSON)</>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
