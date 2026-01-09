@@ -31,7 +31,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
         }
 
         .container {
@@ -40,15 +40,16 @@
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            padding: 40px;
+            padding: 25px;
             width: 100%;
-            max-width: 550px;
+            max-width: 500px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease;
+            overflow: hidden;
         }
 
         h1 {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
             margin-bottom: 8px;
             text-align: center;
@@ -60,18 +61,19 @@
         p.subtitle {
             text-align: center;
             color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 30px;
+            font-size: 13px;
+            margin-bottom: 25px;
         }
 
         .upload-area {
             border: 2px dashed rgba(255, 255, 255, 0.2);
             border-radius: 12px;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            width: 100%;
         }
 
         .upload-area:hover {
@@ -80,7 +82,7 @@
         }
 
         .upload-area i {
-            font-size: 40px;
+            font-size: 32px;
             color: var(--text-muted);
             margin-bottom: 10px;
             transition: color 0.3s;
@@ -89,7 +91,14 @@
         .upload-area:hover i { color: var(--primary); }
 
         .upload-text { font-size: 14px; color: var(--text-main); font-weight: 500; }
-        .upload-subtext { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+        
+        .upload-subtext { 
+            font-size: 11px; 
+            color: var(--text-muted); 
+            margin-top: 8px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
 
         input[type="file"] {
             position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;
@@ -133,13 +142,14 @@
             padding: 15px;
             margin-top: 25px;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
+            font-size: 11px;
             height: 120px;
             overflow-y: auto;
             border: 1px solid rgba(255,255,255,0.05);
             color: #22d3ee;
             display: flex;
             flex-direction: column;
+            word-break: break-all;
         }
         
         .terminal-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 2px;}
@@ -166,6 +176,8 @@
             font-weight: 600;
             margin-top: 15px;
             transition: background 0.3s;
+            word-break: break-all;
+            line-height: 1.4;
         }
         .download-btn:hover { background: #059669; }
 
@@ -174,9 +186,7 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        .spinner {
-            animation: spin 1s linear infinite;
-        }
+        .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -352,7 +362,7 @@
 
                 log("Süre Analizi Yapılıyor...", "info");
                 const duration = await getAudioDuration(audioFile);
-                log(`Dosya: ${rawName} | Süre: ${duration.toFixed(2)}s`, "info");
+                log(`Dosya Süresi: ${duration.toFixed(2)}s`, "info");
 
                 log("Medya verileri okunuyor...", "info");
                 const audioData = new Uint8Array(await audioFile.arrayBuffer());
