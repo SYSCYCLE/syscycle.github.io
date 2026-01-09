@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Low Res Converter</title>
+    <title>Fixed Duration Converter</title>
     <style>
         body { background: #121212; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
         .box { border: 2px solid #333; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 8px; background: #1e1e1e; }
-        button { background: #e65100; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
+        button { background: #d32f2f; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
         button:disabled { background: #555; cursor: wait; }
         #log { text-align: left; background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; border: 1px solid #444; margin-top: 15px; font-size: 0.8rem; }
         video { width: 100%; margin-top: 20px; border: 2px solid #333; display: none; }
@@ -16,8 +16,8 @@
 <body>
 
     <div class="box">
-        <h1>LOW RES CONVERTER</h1>
-        <p>100x100px (Hata Vermez)</p>
+        <h1>SÜRE FIX (EXACT TIME)</h1>
+        <p>Ses Süresi Neyse Video O</p>
 
         <input type="file" id="uploader" accept="audio/*">
         <br>
@@ -49,10 +49,8 @@
                 canvas.width = 100;
                 canvas.height = 100;
                 const ctx = canvas.getContext('2d');
-                
                 ctx.fillStyle = "#000000";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
                 canvas.toBlob(async function(blob) {
                     const arrayBuffer = await blob.arrayBuffer();
                     resolve(new Uint8Array(arrayBuffer));
@@ -117,6 +115,17 @@
             }
         }
 
+        async function getAudioDuration(file) {
+            return new Promise((resolve) => {
+                const objectUrl = URL.createObjectURL(file);
+                const audio = new Audio(objectUrl);
+                audio.onloadedmetadata = function() {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(audio.duration);
+                };
+            });
+        }
+
         async function startProcess() {
             const fileInput = document.getElementById('uploader');
             if (fileInput.files.length === 0) { alert("Ses dosyası seçin!"); return; }
@@ -127,14 +136,18 @@
             if (!worker) await initWorker();
 
             try {
-                log("Ses dosyası okunuyor...");
                 const audioFile = fileInput.files[0];
+                
+                log("Süre hesaplanıyor...");
+                const duration = await getAudioDuration(audioFile);
+                log(`Süre tespit edildi: ${duration} saniye`);
+
+                log("Ses dosyası okunuyor...");
                 const audioData = new Uint8Array(await audioFile.arrayBuffer());
 
-                log("Düşük çözünürlüklü arkaplan hazırlanıyor...");
                 const imageData = await createBlackImage();
 
-                log("İşlem başlıyor (Hafif Mod)...");
+                log("İşlem başlıyor...");
 
                 const args = [
                     "-loop", "1",
@@ -142,11 +155,11 @@
                     "-i", "input.mp3",
                     "-c:v", "libx264",
                     "-r", "1",
+                    "-t", duration.toString(),
                     "-tune", "stillimage",
                     "-c:a", "aac",
                     "-b:a", "128k",
                     "-pix_fmt", "yuv420p",
-                    "-shortest",
                     "output.mp4"
                 ];
 
