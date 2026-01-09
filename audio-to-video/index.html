@@ -2,22 +2,22 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Video Converter (Blob Fix)</title>
+    <title>Video Converter</title>
     <style>
         body { background: #121212; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
         .box { border: 2px solid #333; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 8px; background: #1e1e1e; }
-        button { background: #d32f2f; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
+        button { background: #2e7d32; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
         button:disabled { background: #555; cursor: wait; }
         #log { text-align: left; background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; border: 1px solid #444; margin-top: 15px; font-size: 0.8rem; }
         video { width: 100%; margin-top: 20px; border: 2px solid #333; display: none; }
-        a.download { display: block; margin-top: 15px; background: #1976d2; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        a.download { display: block; margin-top: 15px; background: #1565c0; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="box">
-        <h1>BLOB HACK CONVERTER</h1>
-        <p>CORS Hatası Fixlendi</p>
+        <h1>VIDEO CONVERTER</h1>
+        <p>Image Loop</p>
 
         <input type="file" id="uploader" accept="audio/*">
         <br>
@@ -43,121 +43,127 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
+        function createBlackImage() {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1920;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                canvas.toBlob(async function(blob) {
+                    const arrayBuffer = await blob.arrayBuffer();
+                    resolve(new Uint8Array(arrayBuffer));
+                }, 'image/jpeg', 0.8);
+            });
+        }
+
         async function createWorkerFromUrl(url) {
-            log("Motor dosyası indiriliyor...");
+            log("Motor indiriliyor...");
             try {
                 const response = await fetch(url);
-                if (!response.ok) throw new Error("Worker dosyası indirilemedi!");
+                if (!response.ok) throw new Error("Worker indirilemedi");
                 const scriptContent = await response.text();
-
                 const blob = new Blob([scriptContent], { type: 'application/javascript' });
-                
                 const blobUrl = URL.createObjectURL(blob);
-                
-                log("✅ Motor hafızaya alındı.");
                 return new Worker(blobUrl);
-
             } catch (e) {
-                log("❌ İNDİRME HATASI: " + e.message);
+                log("HATA: " + e.message);
                 throw e;
             }
         }
 
         async function initWorker() {
             if (worker) return;
-
             try {
                 worker = await createWorkerFromUrl(WORKER_URL);
-
-                worker.onmessage = function(e) {
-                    const msg = e.data;
-                    if (msg.type === "ready") {
-                        log("✅ MOTOR HAZIR!");
-                        btn.disabled = false;
-                    } 
-                    else if (msg.type === "stdout") { log(msg.data); } 
-                    else if (msg.type === "stderr") { console.log(msg.data); } 
-                    else if (msg.type === "done") {
-                        try {
-                            const data = msg.data;
-                            if (data.MEMFS && data.MEMFS.length > 0) {
-                                const out = data.MEMFS[0];
-                                log("✅ VİDEO OLUŞTURULDU!");
-                                const blob = new Blob([out.data], { type: "video/mp4" });
-                                const url = URL.createObjectURL(blob);
-                                videoEl.src = url;
-                                videoEl.style.display = "block";
-                                dlArea.innerHTML = `<a href="${url}" download="video.mp4" class="download">📥 İNDİR</a>`;
-                            } else {
-                                log("❌ HATA: Çıktı boş.");
-                            }
-                        } catch (err) {
-                            log("❌ HATA: " + err);
-                        } finally {
-                            btn.disabled = false;
-                            btn.innerText = "TEKRAR YAP";
-                        }
-                    }
-                };
+                worker.onmessage = handleWorkerMessage;
+                log("MOTOR HAZIR!");
             } catch (e) {
                 log("Worker Başlatılamadı: " + e);
             }
         }
 
-        function startProcess() {
-            const fileInput = document.getElementById('uploader');
-            if (fileInput.files.length === 0) { alert("Dosya seç!"); return; }
-
-            const file = fileInput.files[0];
-            btn.disabled = true;
-            btn.innerText = "İŞLENİYOR...";
-            log("Dosya okunuyor...");
-            
-            if (!worker) {
-                initWorker().then(() => {
-                    readFileAndRun(file);
-                });
-            } else {
-                readFileAndRun(file);
+        function handleWorkerMessage(e) {
+            const msg = e.data;
+            if (msg.type === "ready") {
+                btn.disabled = false;
+            } else if (msg.type === "stdout") {
+                log(msg.data);
+            } else if (msg.type === "stderr") {
+                console.log(msg.data);
+            } else if (msg.type === "done") {
+                try {
+                    const data = msg.data;
+                    if (data.MEMFS && data.MEMFS.length > 0) {
+                        const out = data.MEMFS[0];
+                        log("VİDEO OLUŞTURULDU!");
+                        const blob = new Blob([out.data], { type: "video/mp4" });
+                        const url = URL.createObjectURL(blob);
+                        videoEl.src = url;
+                        videoEl.style.display = "block";
+                        dlArea.innerHTML = `<a href="${url}" download="story.mp4" class="download">İNDİR</a>`;
+                    } else {
+                        log("HATA: Çıktı boş.");
+                    }
+                } catch (err) {
+                    log("HATA: " + err);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "TEKRAR YAP";
+                }
             }
         }
 
-        function readFileAndRun(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                
+        async function startProcess() {
+            const fileInput = document.getElementById('uploader');
+            if (fileInput.files.length === 0) { alert("Ses dosyası seçin!"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "HAZIRLANIYOR...";
+            
+            if (!worker) await initWorker();
+
+            try {
+                log("Ses dosyası okunuyor...");
+                const audioFile = fileInput.files[0];
+                const audioData = new Uint8Array(await audioFile.arrayBuffer());
+
+                log("Arkaplan oluşturuluyor...");
+                const imageData = await createBlackImage();
+
+                log("İşlem başlıyor...");
+
                 const args = [
-                    "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30",
+                    "-loop", "1",
+                    "-i", "bg.jpg",
                     "-i", "input.mp3",
-                    "-c:v", "libx264", 
-                    "-preset", "ultrafast", 
+                    "-c:v", "libx264",
                     "-tune", "stillimage",
-                    "-c:a", "aac", 
-                    "-pix_fmt", "yuv420p", 
-                    "-shortest", 
+                    "-c:a", "aac",
+                    "-pix_fmt", "yuv420p",
+                    "-shortest",
                     "output.mp4"
                 ];
 
-                waitForWorkerAndPost(data, args);
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function waitForWorkerAndPost(data, args) {
-            if(worker) {
                 worker.postMessage({
                     type: "run",
                     arguments: args,
-                    MEMFS: [{ name: "input.mp3", data: data }]
+                    MEMFS: [
+                        { name: "bg.jpg", data: imageData },
+                        { name: "input.mp3", data: audioData }
+                    ]
                 });
-            } else {
-                setTimeout(() => waitForWorkerAndPost(data, args), 100);
+
+            } catch (err) {
+                log("HATA: " + err.message);
+                btn.disabled = false;
             }
         }
-        
-        initWorker();
 
+        initWorker();
     </script>
 </body>
 </html>
