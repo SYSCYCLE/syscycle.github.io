@@ -2,109 +2,155 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Pages Video Maker (Legacy Fix)</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.1/dist/ffmpeg.min.js"></script>
+    <title>Kesin Çözüm: Ses -> Video</title>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; padding: 20px; text-align: center; }
-        .box { border: 2px solid #333; padding: 20px; max-width: 500px; margin: 0 auto; border-radius: 10px; }
-        button { background: #00897b; color: white; border: none; padding: 15px; width: 100%; cursor: pointer; font-size: 1.2rem; margin-top: 10px; font-weight: bold; }
-        button:disabled { background: #333; cursor: wait; }
-        #log { text-align: left; background: #111; padding: 10px; height: 150px; overflow-y: scroll; border: 1px solid #444; margin-top: 10px; color: #0f0; }
-        video { width: 100%; margin-top: 20px; border: 1px solid #444; }
+        body { background: #121212; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
+        .box { border: 2px solid #333; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 8px; background: #1e1e1e; }
+        button { background: #d32f2f; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
+        button:disabled { background: #555; cursor: wait; }
+        button:hover:not(:disabled) { background: #b71c1c; }
+        #log { text-align: left; background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; border: 1px solid #444; margin-top: 15px; font-size: 0.8rem; }
+        video { width: 100%; margin-top: 20px; border: 2px solid #333; display: none; }
+        a.download { display: block; margin-top: 15px; background: #1976d2; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="box">
-        <h1>SON ÇARE CONVERTER</h1>
-        <p>SharedArrayBuffer Hatası Vermeyen Versiyon</p>
+        <h1>SON VE KESİN ÇÖZÜM</h1>
+        <p>ASM.JS Teknolojisi (Header/WASM Derdi Yok)</p>
 
         <input type="file" id="uploader" accept="audio/*">
-        <button id="btn" onclick="run()">VİDEO YAP</button>
+        <br>
+        <button id="btn" onclick="startProcess()">VİDEO OLUŞTUR</button>
+
+        <div id="log">Sistem hazır. Dosya seçiniz.</div>
         
-        <div id="log">Hazır. Dosya seç ve butona bas.</div>
-        
-        <video id="output" controls></video>
-        <br><br>
-        <a id="dl" style="display:none; color: yellow; font-size: 1.2rem;">📥 İNDİR</a>
+        <video id="outputVideo" controls></video>
+        <div id="downloadArea"></div>
     </div>
 
     <script>
-        const { createFFmpeg, fetchFile } = FFmpeg;
-
-        const ffmpeg = createFFmpeg({ 
-            log: true,
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.8.5/dist/ffmpeg-core.js'
-        });
-
+        const WORKER_URL = "https://cdn.jsdelivr.net/npm/ffmpeg.js@4.2.9003/ffmpeg-worker-mp4.js";
+        
+        let worker;
         const logDiv = document.getElementById('log');
         const btn = document.getElementById('btn');
+        const videoEl = document.getElementById('outputVideo');
+        const dlArea = document.getElementById('downloadArea');
 
-        function logger(msg) {
+        function log(msg) {
             logDiv.innerHTML += `> ${msg}\n`;
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        async function load() {
-            try {
-                logger("Motor yükleniyor (Eski versiyon)...");
-                await ffmpeg.load();
-                logger("✅ Motor Hazır! SharedArrayBuffer derdi yok.");
-            } catch(e) {
-                logger("HATA: " + e.message);
-            }
-        }
-        
-        load();
-
-        async function run() {
-            const files = document.getElementById('uploader').files;
-            if(!files.length) { alert("Dosya yok!"); return; }
+        function initWorker() {
+            if (worker) return;
+            log("Motor indiriliyor (ASM.js - Biraz sürebilir)...");
             
+            worker = new Worker(WORKER_URL);
+
+            worker.onmessage = function(e) {
+                const msg = e.data;
+                if (msg.type === "ready") {
+                    log("✅ MOTOR HAZIR! (Hata yok, tertemiz)");
+                    btn.disabled = false;
+                } 
+                else if (msg.type === "stdout") {
+                    log(msg.data);
+                } 
+                else if (msg.type === "stderr") {
+                    console.log(msg.data); 
+                } 
+                else if (msg.type === "done") {
+                    try {
+                        const data = msg.data;
+                        if (data.MEMFS && data.MEMFS.length > 0) {
+                            const out = data.MEMFS[0];
+                            if (out) {
+                                log("✅ VİDEO OLUŞTURULDU!");
+                                const blob = new Blob([out.data], { type: "video/mp4" });
+                                const url = URL.createObjectURL(blob);
+                                
+                                videoEl.src = url;
+                                videoEl.style.display = "block";
+                                
+                                dlArea.innerHTML = `<a href="${url}" download="video.mp4" class="download">📥 VİDEOYU İNDİR</a>`;
+                            }
+                        } else {
+                            log("❌ HATA: Çıktı dosyası boş.");
+                        }
+                    } catch (err) {
+                        log("❌ İŞLEME HATASI: " + err);
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = "TEKRAR YAP";
+                    }
+                }
+            };
+            
+            worker.onerror = function(e) {
+                log("❌ WORKER HATASI: " + e.message);
+                btn.disabled = false;
+            };
+        }
+
+        function startProcess() {
+            const fileInput = document.getElementById('uploader');
+            if (fileInput.files.length === 0) {
+                alert("Lütfen bir ses dosyası seçin!");
+                return;
+            }
+
+            const file = fileInput.files[0];
             btn.disabled = true;
             btn.innerText = "İŞLENİYOR...";
-            logger("Dosya okunuyor...");
-
-            try {
-                const file = files[0];
-                ffmpeg.FS('writeFile', 'input.mp3', await fetchFile(file));
-
-                logger("Video işleniyor... (Bu versiyon biraz yavaştır, sabret)");
-
-                await ffmpeg.run(
-                    '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:r=30',
-                    '-i', 'input.mp3',
-                    '-c:v', 'libx264', 
-                    '-preset', 'ultrafast',
-                    '-tune', 'stillimage',
-                    '-c:a', 'aac', 
-                    '-pix_fmt', 'yuv420p', 
-                    '-shortest', 
-                    'output.mp4'
-                );
-
-                logger("✅ BİTTİ! Video aşağıda.");
-                
-                const data = ffmpeg.FS('readFile', 'output.mp4');
-                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                
-                const vid = document.getElementById('output');
-                vid.src = url;
-                
-                const dl = document.getElementById('dl');
-                dl.href = url;
-                dl.download = "final_video.mp4";
-                dl.style.display = "block";
-
-            } catch(e) {
-                logger("💥 HATA: " + e.message);
-                console.error(e);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "TEKRAR YAP";
+            log("Dosya okunuyor...");
+            
+            if (!worker) {
+                initWorker();
             }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                log("Dosya belleğe alındı. FFmpeg başlatılıyor...");
+                const args = [
+                    "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30",
+                    "-i", "input.mp3",
+                    "-c:v", "libx264", 
+                    "-preset", "ultrafast", 
+                    "-tune", "stillimage",
+                    "-c:a", "aac", 
+                    "-pix_fmt", "yuv420p", 
+                    "-shortest", 
+                    "output.mp4"
+                ];
+                
+                checkWorkerAndRun(data, args);
+            };
+            reader.readAsArrayBuffer(file);
         }
+
+        function checkWorkerAndRun(fileData, args) {
+            if (!worker) {
+                 worker = new Worker(WORKER_URL);
+                 setupWorkerHandler();
+            }
+            
+            log("Komut gönderiliyor...");
+            
+            worker.postMessage({
+                type: "run",
+                arguments: args,
+                MEMFS: [
+                    { name: "input.mp3", data: fileData }
+                ]
+            });
+        }
+        
+        initWorker();
+
     </script>
 </body>
 </html>
