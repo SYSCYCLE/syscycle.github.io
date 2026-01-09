@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Video Converter</title>
+    <title>Low Res Converter</title>
     <style>
         body { background: #121212; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
         .box { border: 2px solid #333; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 8px; background: #1e1e1e; }
-        button { background: #2e7d32; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
+        button { background: #e65100; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
         button:disabled { background: #555; cursor: wait; }
         #log { text-align: left; background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; border: 1px solid #444; margin-top: 15px; font-size: 0.8rem; }
         video { width: 100%; margin-top: 20px; border: 2px solid #333; display: none; }
@@ -16,8 +16,8 @@
 <body>
 
     <div class="box">
-        <h1>VIDEO CONVERTER</h1>
-        <p>Image Loop</p>
+        <h1>LOW RES CONVERTER</h1>
+        <p>100x100px (Hata Vermez)</p>
 
         <input type="file" id="uploader" accept="audio/*">
         <br>
@@ -46,8 +46,8 @@
         function createBlackImage() {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 1080;
-                canvas.height = 1920;
+                canvas.width = 100;
+                canvas.height = 100;
                 const ctx = canvas.getContext('2d');
                 
                 ctx.fillStyle = "#000000";
@@ -56,7 +56,7 @@
                 canvas.toBlob(async function(blob) {
                     const arrayBuffer = await blob.arrayBuffer();
                     resolve(new Uint8Array(arrayBuffer));
-                }, 'image/jpeg', 0.8);
+                }, 'image/jpeg', 0.5);
             });
         }
 
@@ -104,7 +104,7 @@
                         const url = URL.createObjectURL(blob);
                         videoEl.src = url;
                         videoEl.style.display = "block";
-                        dlArea.innerHTML = `<a href="${url}" download="story.mp4" class="download">İNDİR</a>`;
+                        dlArea.innerHTML = `<a href="${url}" download="video.mp4" class="download">İNDİR</a>`;
                     } else {
                         log("HATA: Çıktı boş.");
                     }
@@ -131,18 +131,20 @@
                 const audioFile = fileInput.files[0];
                 const audioData = new Uint8Array(await audioFile.arrayBuffer());
 
-                log("Arkaplan oluşturuluyor...");
+                log("Düşük çözünürlüklü arkaplan hazırlanıyor...");
                 const imageData = await createBlackImage();
 
-                log("İşlem başlıyor...");
+                log("İşlem başlıyor (Hafif Mod)...");
 
                 const args = [
                     "-loop", "1",
                     "-i", "bg.jpg",
                     "-i", "input.mp3",
                     "-c:v", "libx264",
+                    "-r", "1",
                     "-tune", "stillimage",
                     "-c:a", "aac",
+                    "-b:a", "128k",
                     "-pix_fmt", "yuv420p",
                     "-shortest",
                     "output.mp4"
