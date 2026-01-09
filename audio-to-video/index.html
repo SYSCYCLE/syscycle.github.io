@@ -2,13 +2,12 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Kesin Çözüm: Ses -> Video</title>
+    <title>Video Converter (Blob Fix)</title>
     <style>
         body { background: #121212; color: #eee; font-family: monospace; text-align: center; padding: 20px; }
         .box { border: 2px solid #333; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 8px; background: #1e1e1e; }
         button { background: #d32f2f; color: white; border: none; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; border-radius: 5px; margin-top: 15px; font-weight: bold; width: 100%; }
         button:disabled { background: #555; cursor: wait; }
-        button:hover:not(:disabled) { background: #b71c1c; }
         #log { text-align: left; background: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: scroll; border: 1px solid #444; margin-top: 15px; font-size: 0.8rem; }
         video { width: 100%; margin-top: 20px; border: 2px solid #333; display: none; }
         a.download { display: block; margin-top: 15px; background: #1976d2; color: white; padding: 10px; text-decoration: none; border-radius: 5px; font-weight: bold; }
@@ -17,14 +16,14 @@
 <body>
 
     <div class="box">
-        <h1>SON VE KESİN ÇÖZÜM</h1>
-        <p>ASM.JS Teknolojisi (Header/WASM Derdi Yok)</p>
+        <h1>BLOB HACK CONVERTER</h1>
+        <p>CORS Hatası Fixlendi</p>
 
         <input type="file" id="uploader" accept="audio/*">
         <br>
         <button id="btn" onclick="startProcess()">VİDEO OLUŞTUR</button>
 
-        <div id="log">Sistem hazır. Dosya seçiniz.</div>
+        <div id="log">Sistem hazır.</div>
         
         <video id="outputVideo" controls></video>
         <div id="downloadArea"></div>
@@ -44,63 +43,70 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        function initWorker() {
-            if (worker) return;
-            log("Motor indiriliyor (ASM.js - Biraz sürebilir)...");
-            
-            worker = new Worker(WORKER_URL);
+        async function createWorkerFromUrl(url) {
+            log("Motor dosyası indiriliyor...");
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Worker dosyası indirilemedi!");
+                const scriptContent = await response.text();
 
-            worker.onmessage = function(e) {
-                const msg = e.data;
-                if (msg.type === "ready") {
-                    log("✅ MOTOR HAZIR! (Hata yok, tertemiz)");
-                    btn.disabled = false;
-                } 
-                else if (msg.type === "stdout") {
-                    log(msg.data);
-                } 
-                else if (msg.type === "stderr") {
-                    console.log(msg.data); 
-                } 
-                else if (msg.type === "done") {
-                    try {
-                        const data = msg.data;
-                        if (data.MEMFS && data.MEMFS.length > 0) {
-                            const out = data.MEMFS[0];
-                            if (out) {
+                const blob = new Blob([scriptContent], { type: 'application/javascript' });
+                
+                const blobUrl = URL.createObjectURL(blob);
+                
+                log("✅ Motor hafızaya alındı.");
+                return new Worker(blobUrl);
+
+            } catch (e) {
+                log("❌ İNDİRME HATASI: " + e.message);
+                throw e;
+            }
+        }
+
+        async function initWorker() {
+            if (worker) return;
+
+            try {
+                worker = await createWorkerFromUrl(WORKER_URL);
+
+                worker.onmessage = function(e) {
+                    const msg = e.data;
+                    if (msg.type === "ready") {
+                        log("✅ MOTOR HAZIR!");
+                        btn.disabled = false;
+                    } 
+                    else if (msg.type === "stdout") { log(msg.data); } 
+                    else if (msg.type === "stderr") { console.log(msg.data); } 
+                    else if (msg.type === "done") {
+                        try {
+                            const data = msg.data;
+                            if (data.MEMFS && data.MEMFS.length > 0) {
+                                const out = data.MEMFS[0];
                                 log("✅ VİDEO OLUŞTURULDU!");
                                 const blob = new Blob([out.data], { type: "video/mp4" });
                                 const url = URL.createObjectURL(blob);
-                                
                                 videoEl.src = url;
                                 videoEl.style.display = "block";
-                                
-                                dlArea.innerHTML = `<a href="${url}" download="video.mp4" class="download">📥 VİDEOYU İNDİR</a>`;
+                                dlArea.innerHTML = `<a href="${url}" download="video.mp4" class="download">📥 İNDİR</a>`;
+                            } else {
+                                log("❌ HATA: Çıktı boş.");
                             }
-                        } else {
-                            log("❌ HATA: Çıktı dosyası boş.");
+                        } catch (err) {
+                            log("❌ HATA: " + err);
+                        } finally {
+                            btn.disabled = false;
+                            btn.innerText = "TEKRAR YAP";
                         }
-                    } catch (err) {
-                        log("❌ İŞLEME HATASI: " + err);
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerText = "TEKRAR YAP";
                     }
-                }
-            };
-            
-            worker.onerror = function(e) {
-                log("❌ WORKER HATASI: " + e.message);
-                btn.disabled = false;
-            };
+                };
+            } catch (e) {
+                log("Worker Başlatılamadı: " + e);
+            }
         }
 
         function startProcess() {
             const fileInput = document.getElementById('uploader');
-            if (fileInput.files.length === 0) {
-                alert("Lütfen bir ses dosyası seçin!");
-                return;
-            }
+            if (fileInput.files.length === 0) { alert("Dosya seç!"); return; }
 
             const file = fileInput.files[0];
             btn.disabled = true;
@@ -108,13 +114,19 @@
             log("Dosya okunuyor...");
             
             if (!worker) {
-                initWorker();
+                initWorker().then(() => {
+                    readFileAndRun(file);
+                });
+            } else {
+                readFileAndRun(file);
             }
+        }
 
+        function readFileAndRun(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
-                log("Dosya belleğe alındı. FFmpeg başlatılıyor...");
+                
                 const args = [
                     "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30",
                     "-i", "input.mp3",
@@ -126,27 +138,22 @@
                     "-shortest", 
                     "output.mp4"
                 ];
-                
-                checkWorkerAndRun(data, args);
+
+                waitForWorkerAndPost(data, args);
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function checkWorkerAndRun(fileData, args) {
-            if (!worker) {
-                 worker = new Worker(WORKER_URL);
-                 setupWorkerHandler();
+        function waitForWorkerAndPost(data, args) {
+            if(worker) {
+                worker.postMessage({
+                    type: "run",
+                    arguments: args,
+                    MEMFS: [{ name: "input.mp3", data: data }]
+                });
+            } else {
+                setTimeout(() => waitForWorkerAndPost(data, args), 100);
             }
-            
-            log("Komut gönderiliyor...");
-            
-            worker.postMessage({
-                type: "run",
-                arguments: args,
-                MEMFS: [
-                    { name: "input.mp3", data: fileData }
-                ]
-            });
         }
         
         initWorker();
