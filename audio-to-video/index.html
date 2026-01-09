@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>WASM: Ses -> Video Dönüştürücü</title>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <style>
+        body { background: #121212; color: #ddd; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; max-width: 600px; width: 100%; text-align: center; }
+        button { background: #E1306C; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: #C13584; }
+        input { margin: 15px 0; }
+        #log { margin-top: 15px; font-family: monospace; font-size: 0.8rem; color: #00ff9d; white-space: pre-wrap; height: 150px; overflow-y: scroll; background: #000; padding: 10px; text-align: left; }
+        video { margin-top: 20px; max-width: 100%; border: 2px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h1>🎵 Sesi Videoya Çevir (WASM)</h1>
+        <p>FFmpeg.wasm kullanarak tarayıcıda MP3'ü MP4 yap.</p>
+
+        <input type="file" id="uploader" accept="audio/*">
+        <br>
+        <button id="convertBtn" onclick="convertToVideo()">VİDEO OLUŞTUR</button>
+
+        <div id="log">Sistem Hazırlanıyor...</div>
+        
+        <video id="outputVideo" controls></video>
+        <br>
+        <a id="downloadLink" style="display:none; color: #E1306C; margin-top:10px;">Videoyu İndir</a>
+    </div>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        
+        const ffmpeg = createFFmpeg({ log: true });
+
+        const logDiv = document.getElementById('log');
+        const convertBtn = document.getElementById('convertBtn');
+
+        function log(message) {
+            logDiv.innerHTML += message + "\n";
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function loadFFmpeg() {
+            log("FFmpeg.wasm yükleniyor (25MB)...");
+            try {
+                await ffmpeg.load();
+                log("✅ FFmpeg hazır!");
+            } catch (e) {
+                log("❌ HATA: FFmpeg yüklenemedi. Sayfayı 'localhost' veya HTTPS sunucuda açtığınızdan emin olun.\nDetay: " + e.message);
+                convertBtn.disabled = true;
+            }
+        }
+        
+        loadFFmpeg();
+
+        async function convertToVideo() {
+            const files = document.getElementById('uploader').files;
+            if (files.length === 0) {
+                alert("Lütfen bir ses dosyası seçin.");
+                return;
+            }
+
+            const file = files[0];
+            const fileName = "input.mp3";
+
+            convertBtn.disabled = true;
+            convertBtn.innerText = "İşleniyor...";
+            log("--- İşlem Başladı ---");
+
+            try {
+                ffmpeg.FS('writeFile', fileName, await fetchFile(file));
+                log("Dosya hafızaya alındı.");
+                log("Video render ediliyor (Bu işlem işlemci hızına göre zaman alır)...");
+                
+                await ffmpeg.run(
+                    '-f', 'lavfi', 
+                    '-i', 'color=c=black:s=1080x1920:r=30',
+                    '-i', fileName,
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-tune', 'stillimage',
+                    '-c:a', 'aac',
+                    '-pix_fmt', 'yuv420p',
+                    '-shortest',
+                    'output.mp4'
+                );
+
+                log("✅ Dönüştürme tamamlandı!");
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+
+                const videoUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                const videoEl = document.getElementById('outputVideo');
+                videoEl.src = videoUrl;
+                
+                const dlLink = document.getElementById('downloadLink');
+                dlLink.href = videoUrl;
+                dlLink.download = "instagram_story.mp4";
+                dlLink.style.display = "block";
+                dlLink.innerText = "📥 Videoyu İndir";
+
+            } catch (error) {
+                log("❌ HATA OLUŞTU: " + error);
+                console.error(error);
+            } finally {
+                convertBtn.disabled = false;
+                convertBtn.innerText = "VİDEO OLUŞTUR";
+            }
+        }
+    </script>
+</body>
+</html>
