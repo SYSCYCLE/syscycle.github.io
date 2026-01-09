@@ -3,80 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ses -> Video (GitHub Pages Uyumlu)</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js"></script>
+    <title>GitHub Pages Video Maker (Legacy Fix)</title>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.9.1/dist/ffmpeg.min.js"></script>
     <style>
-        body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .box { background: #161b22; padding: 20px; border-radius: 6px; border: 1px solid #30363d; max-width: 600px; width: 100%; text-align: center; }
-        h1 { font-size: 1.5rem; margin-bottom: 10px; color: #58a6ff; }
-        button { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; font-size: 1rem; }
-        button:disabled { background: #2ea043; opacity: 0.5; cursor: wait; }
-        button:hover:not(:disabled) { background: #2ea043; }
-        input { margin: 15px 0; color: #c9d1d9; }
-        #log { margin-top: 15px; font-family: monospace; font-size: 0.75rem; color: #7ee787; white-space: pre-wrap; height: 150px; overflow-y: scroll; background: #0d1117; padding: 10px; text-align: left; border: 1px solid #30363d; border-radius: 6px; }
-        video { margin-top: 20px; max-width: 100%; border-radius: 6px; border: 1px solid #30363d; }
-        a.download-btn { display: block; margin-top: 15px; background: #1f6feb; color: white; padding: 10px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+        body { background: #000; color: #fff; font-family: monospace; padding: 20px; text-align: center; }
+        .box { border: 2px solid #333; padding: 20px; max-width: 500px; margin: 0 auto; border-radius: 10px; }
+        button { background: #00897b; color: white; border: none; padding: 15px; width: 100%; cursor: pointer; font-size: 1.2rem; margin-top: 10px; font-weight: bold; }
+        button:disabled { background: #333; cursor: wait; }
+        #log { text-align: left; background: #111; padding: 10px; height: 150px; overflow-y: scroll; border: 1px solid #444; margin-top: 10px; color: #0f0; }
+        video { width: 100%; margin-top: 20px; border: 1px solid #444; }
     </style>
 </head>
 <body>
 
     <div class="box">
-        <h1>🎵 GitHub Pages Converter</h1>
-        <p>Ses dosyasını seç, siyah ekranlı videoya çevir.</p>
+        <h1>SON ÇARE CONVERTER</h1>
+        <p>SharedArrayBuffer Hatası Vermeyen Versiyon</p>
 
         <input type="file" id="uploader" accept="audio/*">
-        <br>
-        <button id="convertBtn" onclick="convertToVideo()">VİDEO OLUŞTUR</button>
-
-        <div id="log">Sistem başlatılıyor...</div>
+        <button id="btn" onclick="run()">VİDEO YAP</button>
         
-        <video id="outputVideo" controls></video>
-        <a id="downloadLink" class="download-btn" style="display:none;">📥 Videoyu İndir</a>
+        <div id="log">Hazır. Dosya seç ve butona bas.</div>
+        
+        <video id="output" controls></video>
+        <br><br>
+        <a id="dl" style="display:none; color: yellow; font-size: 1.2rem;">📥 İNDİR</a>
     </div>
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
-        
+
         const ffmpeg = createFFmpeg({ 
             log: true,
-            corePath: 'https://unpkg.com/@ffmpeg/core@0.10.0/dist/ffmpeg-core.js'
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.8.5/dist/ffmpeg-core.js'
         });
 
         const logDiv = document.getElementById('log');
-        const convertBtn = document.getElementById('convertBtn');
+        const btn = document.getElementById('btn');
 
-        function log(message) {
-            logDiv.innerHTML += message + "\n";
+        function logger(msg) {
+            logDiv.innerHTML += `> ${msg}\n`;
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        async function loadFFmpeg() {
+        async function load() {
             try {
-                log("FFmpeg yükleniyor...");
+                logger("Motor yükleniyor (Eski versiyon)...");
                 await ffmpeg.load();
-                log("✅ Hazır! Dosya seçebilirsiniz.");
-            } catch (e) {
-                log("❌ HATA: " + e.message);
+                logger("✅ Motor Hazır! SharedArrayBuffer derdi yok.");
+            } catch(e) {
+                logger("HATA: " + e.message);
             }
         }
         
-        loadFFmpeg();
+        load();
 
-        async function convertToVideo() {
+        async function run() {
             const files = document.getElementById('uploader').files;
-            if (files.length === 0) { alert("Dosya seçin!"); return; }
-
-            const file = files[0];
-            convertBtn.disabled = true;
-            convertBtn.innerText = "İşleniyor (Lütfen bekleyin)...";
+            if(!files.length) { alert("Dosya yok!"); return; }
             
-            logDiv.innerHTML = "İşlem başladı...\n";
+            btn.disabled = true;
+            btn.innerText = "İŞLENİYOR...";
+            logger("Dosya okunuyor...");
 
             try {
+                const file = files[0];
                 ffmpeg.FS('writeFile', 'input.mp3', await fetchFile(file));
 
-                log("Render başladı. Bu işlem tarayıcıda yapıldığı için biraz sürebilir...");
-                
+                logger("Video işleniyor... (Bu versiyon biraz yavaştır, sabret)");
+
                 await ffmpeg.run(
                     '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:r=30',
                     '-i', 'input.mp3',
@@ -84,31 +79,30 @@
                     '-preset', 'ultrafast',
                     '-tune', 'stillimage',
                     '-c:a', 'aac', 
-                    '-b:a', '128k',
                     '-pix_fmt', 'yuv420p', 
-                    '-shortest',
+                    '-shortest', 
                     'output.mp4'
                 );
 
-                log("✅ Bitti! Video hazırlanıyor...");
-
+                logger("✅ BİTTİ! Video aşağıda.");
+                
                 const data = ffmpeg.FS('readFile', 'output.mp4');
-                const videoUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 
-                const videoEl = document.getElementById('outputVideo');
-                videoEl.src = videoUrl;
+                const vid = document.getElementById('output');
+                vid.src = url;
                 
-                const dlLink = document.getElementById('downloadLink');
-                dlLink.href = videoUrl;
-                dlLink.download = "video.mp4";
-                dlLink.style.display = "block";
+                const dl = document.getElementById('dl');
+                dl.href = url;
+                dl.download = "final_video.mp4";
+                dl.style.display = "block";
 
-            } catch (error) {
-                log("❌ HATA: " + error.message);
-                console.error(error);
+            } catch(e) {
+                logger("💥 HATA: " + e.message);
+                console.error(e);
             } finally {
-                convertBtn.disabled = false;
-                convertBtn.innerText = "VİDEO OLUŞTUR";
+                btn.disabled = false;
+                btn.innerText = "TEKRAR YAP";
             }
         }
     </script>
