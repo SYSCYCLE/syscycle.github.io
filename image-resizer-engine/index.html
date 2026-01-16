@@ -83,7 +83,6 @@
         if(!upload.files[0] || !tw || !th || tw <= 0 || th <= 0) return;
 
         const img = new Image();
-        img.src = URL.createObjectURL(upload.files[0]);
         img.onload = () => {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = img.width; 
@@ -103,7 +102,7 @@
             }
 
             const freshView = new Uint8Array(wasmInstance.exports.memory.buffer);
-            freshView.fill(0, 0, totalRequired);
+            freshView.fill(0);
             freshView.set(imageData.data, 0);
 
             wasmInstance.exports.fit_with_padding(0, img.width, img.height, srcSize, tw, th);
@@ -113,17 +112,17 @@
             outCanvas.width = tw; 
             outCanvas.height = th;
             const outCtx = outCanvas.getContext('2d');
-            outCtx.clearRect(0, 0, tw, th);
             outCtx.putImageData(new ImageData(resultData, tw, th), 0, 0);
 
             downloadBtn.style.display = 'block';
             URL.revokeObjectURL(img.src);
         };
+        img.src = URL.createObjectURL(upload.files[0]);
     };
 
     downloadBtn.onclick = () => {
         const a = document.createElement('a');
-        a.download = `wasm_resizer_${Date.now()}.png`;
+        a.download = `wasm_${Date.now()}.png`;
         a.href = outCanvas.toDataURL("image/png");
         a.click();
     };
