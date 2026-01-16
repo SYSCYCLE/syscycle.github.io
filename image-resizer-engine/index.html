@@ -2,25 +2,20 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WASM Studio Pro | Dark Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Studio Pro | Ultra Fix</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #8b5cf6;
             --secondary: #ec4899;
             --bg-dark: #0f172a;
-            --glass: rgba(30, 41, 59, 0.8);
+            --glass: rgba(30, 41, 59, 0.85);
             --text-main: #f8fafc;
             --border: rgba(255, 255, 255, 0.1);
         }
 
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -32,7 +27,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
+            padding: 20px;
         }
 
         @keyframes gradientMove {
@@ -43,68 +38,46 @@
 
         .glass-card {
             background: var(--glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 30px 20px;
+            border-radius: 32px;
+            padding: 35px;
             width: 100%;
             max-width: 500px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         h1 {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: 800;
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             background: linear-gradient(to right, #c084fc, #f472b6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #94a3b8;
-            margin-bottom: 25px;
-            font-size: 0.85rem;
-        }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 25px; font-size: 0.85rem; }
 
         .dropzone {
-            border: 2px dashed rgba(139, 92, 246, 0.4);
-            border-radius: 16px;
-            padding: 30px 15px;
+            border: 2px dashed rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            padding: 35px 20px;
             text-align: center;
             cursor: pointer;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(15, 23, 42, 0.3);
             margin-bottom: 20px;
             transition: 0.3s;
         }
 
-        .dropzone:active { transform: scale(0.98); }
+        .dropzone:hover { border-color: var(--primary); background: rgba(139, 92, 246, 0.1); }
 
-        .dropzone svg {
-            width: 40px; height: 40px;
-            margin-bottom: 10px;
-            stroke: var(--primary);
-        }
-
-        .input-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 480px) {
-            .input-row {
-                grid-template-columns: 1fr;
-            }
-        }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 480px) { .input-row { grid-template-columns: 1fr; } }
 
         .field-group { display: flex; flex-direction: column; gap: 6px; }
-
-        label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
 
         input {
             background: rgba(15, 23, 42, 0.6);
@@ -116,44 +89,37 @@
             width: 100%;
         }
 
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
         button {
             width: 100%;
-            padding: 14px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 14px;
             border: none;
             font-weight: 700;
             cursor: pointer;
             transition: 0.3s;
+            text-transform: uppercase;
         }
 
-        #processBtn {
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            color: white;
-            box-shadow: 0 8px 16px -4px rgba(139, 92, 246, 0.4);
-        }
+        #processBtn { background: linear-gradient(45deg, var(--primary), var(--secondary)); color: white; }
+        #processBtn:disabled { opacity: 0.3; }
 
-        #processBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #downloadBtn { background: white; color: #0f172a; margin-top: 12px; display: none; }
 
-        #downloadBtn {
-            background: #f8fafc;
-            color: #0f172a;
-            margin-top: 12px;
-            display: none;
+        .canvas-wrapper {
+            margin-top: 25px;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
         }
 
         canvas {
-            margin-top: 25px;
+            display: block;
             width: 100%;
             height: auto;
-            border-radius: 12px;
             background-color: #0f172a;
             background-image: linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%);
-            background-size: 16px 16px;
+            background-size: 20px 20px;
         }
     </style>
 </head>
@@ -164,26 +130,27 @@
     <p class="subtitle">Next-gen Image Engine</p>
 
     <div class="dropzone" id="dropzone">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-        <div id="fileLabel" style="font-size: 0.9rem;">Choose an image.</div>
+        <div id="fileLabel">Choose an image.</div>
         <input type="file" id="upload" style="display: none" accept="image/*">
     </div>
 
     <div class="input-row">
         <div class="field-group">
-            <label>Width (W)</label>
+            <label>Width</label>
             <input type="number" id="targetW" placeholder="0">
         </div>
         <div class="field-group">
-            <label>Height (H)</label>
+            <label>Height</label>
             <input type="number" id="targetH" placeholder="0">
         </div>
     </div>
 
-    <button id="processBtn" disabled>WORK (WASM)</button>
-    <button id="downloadBtn">DOWNLOAD (PNG)</button>
+    <button id="processBtn" disabled>Process via WASM</button>
+    <button id="downloadBtn">Download PNG</button>
 
-    <canvas id="outputCanvas"></canvas>
+    <div class="canvas-wrapper">
+        <canvas id="outputCanvas"></canvas>
+    </div>
 </div>
 
 <script>
@@ -191,7 +158,6 @@
 
     let wasmInstance;
     const upload = document.getElementById('upload');
-    const dropzone = document.getElementById('dropzone');
     const processBtn = document.getElementById('processBtn');
     const downloadBtn = document.getElementById('downloadBtn');
 
@@ -200,44 +166,55 @@
         processBtn.disabled = false;
     });
 
-    dropzone.onclick = () => upload.click();
+    document.getElementById('dropzone').onclick = () => upload.click();
     upload.onchange = (e) => { if(e.target.files[0]) document.getElementById('fileLabel').innerText = e.target.files[0].name; };
 
     processBtn.onclick = () => {
         const tw = parseInt(document.getElementById('targetW').value);
         const th = parseInt(document.getElementById('targetH').value);
-        if(!upload.files[0] || !tw || !th) return alert("Eksik bilgi!");
+        if(!upload.files[0] || !tw || !th) return;
 
         const img = new Image();
         img.src = URL.createObjectURL(upload.files[0]);
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const data = ctx.getImageData(0, 0, img.width, img.height);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width; tempCanvas.height = img.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(img, 0, 0);
+            const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
 
             const srcSize = img.width * img.height * 4;
             const dstSize = tw * th * 4;
-            const pages = Math.ceil((srcSize + dstSize) / 65536) + 2;
-            const current = wasmInstance.exports.memory.buffer.byteLength / 65536;
-            if(pages > current) wasmInstance.exports.memory.grow(pages - current);
+            const totalRequired = srcSize + dstSize;
 
-            const mem = new Uint8Array(wasmInstance.exports.memory.buffer);
-            mem.set(data.data, 0);
+            const currentBytes = wasmInstance.exports.memory.buffer.byteLength;
+            if (totalRequired > currentBytes) {
+                const pagesNeeded = Math.ceil((totalRequired - currentBytes) / 65536);
+                wasmInstance.exports.memory.grow(pagesNeeded);
+            }
+
+            const memoryBuffer = new Uint8Array(wasmInstance.exports.memory.buffer);
+            memoryBuffer.set(imageData.data, 0);
+
             wasmInstance.exports.fit_with_padding(0, img.width, img.height, srcSize, tw, th);
 
-            const result = new Uint8ClampedArray(wasmInstance.exports.memory.buffer, srcSize, dstSize);
+            const resultData = new Uint8ClampedArray(wasmInstance.exports.memory.buffer, srcSize, dstSize);
+            
             const out = document.getElementById('outputCanvas');
-            out.width = tw; out.height = th;
-            out.getContext('2d').putImageData(new ImageData(result, tw, th), 0, 0);
+            out.width = tw; 
+            out.height = th;
+            const outCtx = out.getContext('2d');
+            
+            outCtx.clearRect(0, 0, tw, th);
+            outCtx.putImageData(new ImageData(resultData, tw, th), 0, 0);
+
             downloadBtn.style.display = 'block';
         };
     };
 
     downloadBtn.onclick = () => {
         const a = document.createElement('a');
-        a.download = 'export.png';
+        a.download = 'wasm_export.png';
         a.href = document.getElementById('outputCanvas').toDataURL();
         a.click();
     };
