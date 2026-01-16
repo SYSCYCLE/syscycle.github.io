@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WASM Studio Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -14,7 +14,7 @@
             --text-main: #f8fafc;
             --border: rgba(255, 255, 255, 0.1);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #1e1b4b);
@@ -80,7 +80,7 @@
     processBtn.onclick = () => {
         const tw = parseInt(document.getElementById('targetW').value);
         const th = parseInt(document.getElementById('targetH').value);
-        if(!upload.files[0] || !tw || !th) return;
+        if(!upload.files[0] || !tw || !th || tw <= 0 || th <= 0) return;
 
         const img = new Image();
         img.src = URL.createObjectURL(upload.files[0]);
@@ -102,6 +102,7 @@
             }
 
             const freshMemory = new Uint8Array(wasmInstance.exports.memory.buffer);
+            freshMemory.fill(0);
             freshMemory.set(imageData.data, 0);
 
             wasmInstance.exports.fit_with_padding(0, img.width, img.height, srcSize, tw, th);
@@ -110,16 +111,19 @@
             
             outCanvas.width = tw; 
             outCanvas.height = th;
-            outCanvas.getContext('2d').putImageData(new ImageData(resultData, tw, th), 0, 0);
+            const outCtx = outCanvas.getContext('2d');
+            outCtx.clearRect(0, 0, tw, th);
+            outCtx.putImageData(new ImageData(resultData, tw, th), 0, 0);
 
             downloadBtn.style.display = 'block';
+            URL.revokeObjectURL(img.src);
         };
     };
 
     downloadBtn.onclick = () => {
         const a = document.createElement('a');
         a.download = `wasm_resizer_${Date.now()}.png`;
-        a.href = outCanvas.toDataURL();
+        a.href = outCanvas.toDataURL("image/png");
         a.click();
     };
 </script>
