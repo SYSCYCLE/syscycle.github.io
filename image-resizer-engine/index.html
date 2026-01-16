@@ -165,23 +165,23 @@
 
     <div class="dropzone" id="dropzone">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-        <div id="fileLabel" style="font-size: 0.9rem;">Resim Seçin</div>
+        <div id="fileLabel" style="font-size: 0.9rem;">Choose an image.</div>
         <input type="file" id="upload" style="display: none" accept="image/*">
     </div>
 
     <div class="input-row">
         <div class="field-group">
-            <label>Genişlik (W)</label>
+            <label>Width (W)</label>
             <input type="number" id="targetW" placeholder="0">
         </div>
         <div class="field-group">
-            <label>Yükseklik (H)</label>
+            <label>Height (H)</label>
             <input type="number" id="targetH" placeholder="0">
         </div>
     </div>
 
-    <button id="processBtn" disabled>İŞLE (WASM)</button>
-    <button id="downloadBtn">İNDİR (PNG)</button>
+    <button id="processBtn" disabled>WORK (WASM)</button>
+    <button id="downloadBtn">DOWNLOAD (PNG)</button>
 
     <canvas id="outputCanvas"></canvas>
 </div>
