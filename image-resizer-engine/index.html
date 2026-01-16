@@ -86,7 +86,8 @@
         img.src = URL.createObjectURL(upload.files[0]);
         img.onload = () => {
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width; tempCanvas.height = img.height;
+            tempCanvas.width = img.width; 
+            tempCanvas.height = img.height;
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(img, 0, 0);
             const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
@@ -101,9 +102,9 @@
                 wasmInstance.exports.memory.grow(pagesNeeded);
             }
 
-            const freshMemory = new Uint8Array(wasmInstance.exports.memory.buffer);
-            freshMemory.fill(0);
-            freshMemory.set(imageData.data, 0);
+            const freshView = new Uint8Array(wasmInstance.exports.memory.buffer);
+            freshView.fill(0, 0, totalRequired);
+            freshView.set(imageData.data, 0);
 
             wasmInstance.exports.fit_with_padding(0, img.width, img.height, srcSize, tw, th);
 
