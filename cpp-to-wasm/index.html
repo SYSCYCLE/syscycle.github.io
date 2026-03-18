@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>C++ to WebAssembly Compiler</title>
     
     <!-- Fonts -->
@@ -32,6 +32,13 @@
                             800: '#1e293b',
                             700: '#334155',
                         }
+                    },
+                    screens: {
+                        'xs': '475px',
+                        'sm': '640px',
+                        'md': '768px',
+                        'lg': '1024px',
+                        'xl': '1280px',
                     }
                 }
             }
@@ -39,9 +46,14 @@
     </script>
 
     <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         body {
             background-color: #0f172a;
             color: #e2e8f0;
+            touch-action: manipulation;
         }
         
         .editor-container {
@@ -54,16 +66,25 @@
             left: 0;
             top: 0;
             bottom: 0;
-            width: 3rem;
+            width: 2.5rem;
             background: #1e293b;
             color: #64748b;
             text-align: right;
-            padding: 1rem 0.5rem;
+            padding: 0.75rem 0.25rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5rem;
+            font-size: 0.75rem;
+            line-height: 1.25rem;
             user-select: none;
             border-right: 1px solid #334155;
+        }
+
+        @media (min-width: 768px) {
+            .line-numbers {
+                width: 3rem;
+                padding: 1rem 0.5rem;
+                font-size: 0.875rem;
+                line-height: 1.5rem;
+            }
         }
 
         textarea.code-editor {
@@ -73,12 +94,20 @@
             color: #e2e8f0;
             border: none;
             outline: none;
-            padding: 1rem 1rem 1rem 3.5rem;
+            padding: 0.75rem 0.75rem 0.75rem 2.75rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5rem;
+            font-size: 0.75rem;
+            line-height: 1.25rem;
             resize: none;
             tab-size: 4;
+        }
+
+        @media (min-width: 768px) {
+            textarea.code-editor {
+                padding: 1rem 1rem 1rem 3.5rem;
+                font-size: 0.875rem;
+                line-height: 1.5rem;
+            }
         }
 
         textarea.code-editor::placeholder {
@@ -87,9 +116,17 @@
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
+        
+        @media (min-width: 768px) {
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+        }
+        
         ::-webkit-scrollbar-track {
             background: #1e293b; 
         }
@@ -101,10 +138,6 @@
             background: #64748b; 
         }
 
-        .glow-effect {
-            box-shadow: 0 0 20px rgba(101, 79, 240, 0.3);
-        }
-
         @keyframes pulse-glow {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -112,120 +145,140 @@
         .compiling-indicator {
             animation: pulse-glow 1.5s infinite;
         }
+
+        /* Mobile optimizations */
+        @media (max-width: 639px) {
+            .mobile-full {
+                width: 100vw;
+                margin-left: calc(-50vw + 50%);
+            }
+            
+            .touch-target {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
+
+        /* Prevent zoom on input focus */
+        @media (max-width: 768px) {
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="h-16 border-b border-dark-700 bg-dark-900/80 backdrop-blur-md flex items-center justify-between px-6 z-10">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cpp to-wasm flex items-center justify-center text-white font-bold text-xl shadow-lg">
+    <header class="h-14 sm:h-16 border-b border-dark-700 bg-dark-900/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 z-20 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-cpp to-wasm flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-lg shrink-0">
                 <i class="fa-solid fa-code"></i>
             </div>
-            <div>
-                <h1 class="font-bold text-lg tracking-tight text-white">Wasm<span class="text-wasm">Builder</span></h1>
-                <p class="text-xs text-slate-400">C++ to WebAssembly Converter</p>
+            <div class="min-w-0">
+                <h1 class="font-bold text-sm sm:text-lg tracking-tight text-white truncate">Wasm<span class="text-wasm">Builder</span></h1>
+                <p class="text-[10px] sm:text-xs text-slate-400 hidden xs:block">C++ to WebAssembly</p>
             </div>
         </div>
         
-        <div class="flex items-center gap-4">
-            <div class="hidden md:flex items-center gap-2 text-sm text-slate-400 bg-dark-800 px-3 py-1.5 rounded-full border border-dark-700">
+        <div class="flex items-center gap-2 sm:gap-4">
+            <div class="hidden lg:flex items-center gap-2 text-xs text-slate-400 bg-dark-800 px-2 sm:px-3 py-1 rounded-full border border-dark-700 shrink-0">
                 <i class="fa-solid fa-microchip text-wasm"></i>
-                <span>Emscripten v3.1.34</span>
+                <span class="hidden sm:inline">Emscripten v3.1.34</span>
             </div>
-            <a href="#" class="text-slate-400 hover:text-white transition-colors">
-                <i class="fa-brands fa-github text-xl"></i>
+            <a href="#" class="text-slate-400 hover:text-white transition-colors touch-target flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto">
+                <i class="fa-brands fa-github text-lg sm:text-xl"></i>
             </a>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative min-h-0">
         <!-- Background Image Overlay -->
-        <div class="absolute inset-0 z-0 opacity-10 pointer-events-none" style="background-image: url('https://image.qwenlm.ai/public_source/f768ec86-843f-4108-98c6-3dd76524afe9/10bef9e66-6847-43a6-858f-9289878d6989.png'); background-size: cover; background-position: center;"></div>
+        <div class="absolute inset-0 z-0 opacity-5 sm:opacity-10 pointer-events-none" style="background-image: url('https://image.qwenlm.ai/public_source/f768ec86-843f-4108-98c6-3dd76524afe9/10bef9e66-6847-43a6-858f-9289878d6989.png'); background-size: cover; background-position: center;"></div>
 
         <!-- Left Panel: C++ Input -->
-        <section class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-dark-700 relative z-10 bg-dark-900/90">
-            <div class="h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-4">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-file-code text-cpp"></i>
-                    <span class="text-sm font-medium text-slate-300">main.cpp</span>
+        <section class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-dark-700 relative z-10 bg-dark-900/95 min-h-[40vh] md:min-h-0">
+            <div class="h-9 sm:h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-3 sm:px-4 shrink-0">
+                <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+                    <i class="fa-solid fa-file-code text-cpp text-xs sm:text-sm"></i>
+                    <span class="text-xs sm:text-sm font-medium text-slate-300 truncate">main.cpp</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <select id="optimizationLevel" class="bg-dark-900 border border-dark-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-wasm">
-                        <option value="-O0">Debug (-O0)</option>
-                        <option value="-O2" selected>Release (-O2)</option>
-                        <option value="-O3">Optimize (-O3)</option>
-                        <option value="-Os">Size (-Os)</option>
+                <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <select id="optimizationLevel" class="bg-dark-900 border border-dark-700 text-[10px] sm:text-xs text-slate-300 rounded px-1.5 sm:px-2 py-1 focus:outline-none focus:border-wasm touch-target">
+                        <option value="-O0">-O0</option>
+                        <option value="-O2" selected>-O2</option>
+                        <option value="-O3">-O3</option>
+                        <option value="-Os">-Os</option>
                     </select>
                 </div>
             </div>
             
-            <div class="flex-1 editor-container relative group">
+            <div class="flex-1 editor-container relative group min-h-0">
                 <div class="line-numbers" id="lineNumbersCpp">1</div>
-                <textarea id="cppInput" class="code-editor" spellcheck="false" placeholder="// C++ kodunuzu buraya yazın...
-#include <emscripten.h>
-
-extern &quot;C&quot; {
-    EMSCRIPTEN_KEEPALIVE
-    int add(int a, int b) {
-        return a + b;
-    }
-}"></textarea>
+                <textarea id="cppInput" class="code-editor" spellcheck="false" placeholder="// C++ kodunuzu buraya yazın..."></textarea>
             </div>
         </section>
 
         <!-- Right Panel: Wasm Output -->
-        <section class="flex-1 flex flex-col relative z-10 bg-dark-900/90">
-            <div class="h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-4">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-file-binary text-wasm"></i>
-                    <span class="text-sm font-medium text-slate-300">output.wasm</span>
-                    <span id="fileSize" class="text-xs text-slate-500 ml-2">0 KB</span>
+        <section class="flex-1 flex flex-col relative z-10 bg-dark-900/95 min-h-[40vh] md:min-h-0">
+            <div class="h-9 sm:h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-3 sm:px-4 shrink-0">
+                <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+                    <i class="fa-solid fa-file-binary text-wasm text-xs sm:text-sm"></i>
+                    <span class="text-xs sm:text-sm font-medium text-slate-300 truncate">output.wasm</span>
+                    <span id="fileSize" class="text-[10px] sm:text-xs text-slate-500 ml-1 sm:ml-2 shrink-0">0 KB</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button id="downloadBtn" class="text-xs bg-dark-700 hover:bg-dark-600 text-white px-2 py-1 rounded transition-colors flex items-center gap-1 opacity-50 cursor-not-allowed">
-                        <i class="fa-solid fa-download"></i> İndir
+                <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <button id="downloadBtn" class="text-[10px] sm:text-xs bg-dark-700 hover:bg-dark-600 disabled:bg-dark-800 disabled:text-slate-600 text-white px-1.5 sm:px-2 py-1 rounded transition-colors flex items-center gap-1 touch-target opacity-50 cursor-not-allowed" disabled>
+                        <i class="fa-solid fa-download text-[10px] sm:text-xs"></i>
+                        <span class="hidden xs:inline">İndir</span>
                     </button>
                 </div>
             </div>
 
-            <div class="flex-1 editor-container relative bg-[#0d1117]">
+            <div class="flex-1 editor-container relative bg-[#0d1117] min-h-0">
                 <div class="line-numbers" id="lineNumbersWasm">1</div>
                 <textarea id="wasmOutput" class="code-editor text-slate-400" readonly placeholder="Derleme sonucu burada görünecek..."></textarea>
                 
                 <!-- Loading Overlay -->
-                <div id="loadingOverlay" class="absolute inset-0 bg-dark-900/90 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20">
-                    <div class="w-16 h-16 border-4 border-wasm border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <h3 class="text-lg font-bold text-white mb-2">Derleniyor...</h3>
-                    <p class="text-sm text-slate-400 font-mono" id="loadingText">Initializing Emscripten...</p>
+                <div id="loadingOverlay" class="absolute inset-0 bg-dark-900/95 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20 p-4">
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 border-4 border-wasm border-t-transparent rounded-full animate-spin mb-3 sm:mb-4"></div>
+                    <h3 class="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2 text-center">Derleniyor...</h3>
+                    <p class="text-[10px] sm:text-sm text-slate-400 font-mono text-center" id="loadingText">Initializing...</p>
                 </div>
             </div>
         </section>
     </main>
 
     <!-- Footer / Toolbar -->
-    <footer class="h-14 bg-dark-800 border-t border-dark-700 flex items-center justify-between px-6 z-20">
-        <div class="flex items-center gap-4">
-            <button id="compileBtn" class="bg-wasm hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-2">
-                <i class="fa-solid fa-play"></i>
-                Derle (Compile)
+    <footer class="h-12 sm:h-14 bg-dark-800 border-t border-dark-700 flex items-center justify-between px-3 sm:px-6 z-20 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button id="compileBtn" class="bg-wasm hover:bg-indigo-600 active:bg-indigo-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5 sm:gap-2 touch-target shrink-0">
+                <i class="fa-solid fa-play text-xs sm:text-sm"></i>
+                <span class="hidden xs:inline">Derle</span>
             </button>
-            <button id="clearBtn" class="text-slate-400 hover:text-white text-sm transition-colors">
-                Temizle
+            <button id="clearBtn" class="text-slate-400 hover:text-white text-xs sm:text-sm transition-colors touch-target px-2 sm:px-3 py-1.5 sm:py-2 shrink-0">
+                <span class="hidden xs:inline">Temizle</span>
+                <i class="fa-solid fa-trash xs:hidden"></i>
             </button>
         </div>
 
-        <div class="flex items-center gap-6 text-xs text-slate-400 font-mono">
-            <div class="flex items-center gap-2">
-                <div id="statusDot" class="w-2 h-2 rounded-full bg-slate-500"></div>
-                <span id="statusText">Hazır</span>
+        <div class="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-xs text-slate-400 font-mono shrink-0">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div id="statusDot" class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-slate-500"></div>
+                <span id="statusText" class="hidden sm:inline">Hazır</span>
             </div>
-            <div>
+            <div class="hidden xs:block">
                 <span class="text-slate-500">Ln</span> <span id="cursorPos">1:1</span>
             </div>
         </div>
     </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 bg-dark-800 border border-dark-700 text-white px-4 py-2 rounded-lg shadow-xl transform translate-y-full opacity-0 transition-all duration-300 z-50 flex items-center gap-2 text-sm">
+        <i class="fa-solid fa-check-circle text-emerald-500"></i>
+        <span id="toastMessage">İşlem başarılı</span>
+    </div>
 
     <script>
         (function() {
@@ -244,9 +297,35 @@ extern &quot;C&quot; {
             const fileSize = document.getElementById('fileSize');
             const cursorPos = document.getElementById('cursorPos');
             const optimizationLevel = document.getElementById('optimizationLevel');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
 
             // Global variable to store compiled WASM binary
             let compiledWasmData = null;
+
+            // Default C++ code
+            const defaultCode = `// C++ to WebAssembly Example
+#include <emscripten.h>
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    int add(int a, int b) {
+        return a + b;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int multiply(int a, int b) {
+        return a * b;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    const char* greet(const char* name) {
+        return "Hello from Wasm!";
+    }
+}`;
+
+            // Set default code on load
+            cppInput.value = defaultCode;
 
             // Update Line Numbers
             function updateLineNumbers(textarea, lineNumbersDiv) {
@@ -270,7 +349,7 @@ extern &quot;C&quot; {
             // Input Event Listeners
             cppInput.addEventListener('input', () => {
                 updateLineNumbers(cppInput, lineNumbersCpp);
-                setStatus('ready', 'Değişiklikler kaydedilmedi');
+                setStatus('ready', 'Değişiklikler var');
             });
 
             cppInput.addEventListener('keyup', updateCursorPos);
@@ -287,74 +366,63 @@ extern &quot;C&quot; {
             // Status Management
             function setStatus(type, message) {
                 statusText.innerText = message;
-                statusDot.className = 'w-2 h-2 rounded-full';
+                statusDot.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full';
                 
                 if (type === 'ready') {
                     statusDot.classList.add('bg-slate-500');
+                    statusDot.classList.remove('bg-amber-500', 'bg-emerald-500', 'bg-red-500', 'compiling-indicator');
                 } else if (type === 'compiling') {
                     statusDot.classList.add('bg-amber-500', 'compiling-indicator');
+                    statusDot.classList.remove('bg-slate-500', 'bg-emerald-500', 'bg-red-500');
                 } else if (type === 'success') {
                     statusDot.classList.add('bg-emerald-500');
+                    statusDot.classList.remove('bg-slate-500', 'bg-amber-500', 'bg-red-500', 'compiling-indicator');
                 } else if (type === 'error') {
                     statusDot.classList.add('bg-red-500');
+                    statusDot.classList.remove('bg-slate-500', 'bg-amber-500', 'bg-emerald-500', 'compiling-indicator');
                 }
+            }
+
+            // Toast Notification
+            function showToast(message, type = 'success') {
+                toastMessage.innerText = message;
+                const icon = toast.querySelector('i');
+                icon.className = type === 'success' ? 'fa-solid fa-check-circle text-emerald-500' : 'fa-solid fa-exclamation-circle text-red-500';
+                
+                toast.classList.remove('translate-y-full', 'opacity-0');
+                
+                setTimeout(() => {
+                    toast.classList.add('translate-y-full', 'opacity-0');
+                }, 2500);
             }
 
             // Generate WASM Binary
             function generateWasmBinary(sourceCode) {
-                // WASM magic number: \0asm (0x00, 0x61, 0x73, 0x6d)
-                // Version: 1 (0x01, 0x00, 0x00, 0x00)
-                
                 const header = new Uint8Array([
                     0x00, 0x61, 0x73, 0x6d,  // Magic number
                     0x01, 0x00, 0x00, 0x00   // Version 1
                 ]);
 
-                // Type section (section id = 1)
                 const typeSection = new Uint8Array([
-                    0x01,  // Section id
-                    0x07,  // Section size
-                    0x01,  // Number of types
-                    0x60,  // Function type
-                    0x02,  // Number of params
-                    0x7f, 0x7f,  // Two i32 params
-                    0x01,  // Number of results
-                    0x7f   // One i32 result
+                    0x01, 0x07, 0x01, 0x60,
+                    0x02, 0x7f, 0x7f, 0x01, 0x7f
                 ]);
 
-                // Function section (section id = 3)
                 const functionSection = new Uint8Array([
-                    0x03,  // Section id
-                    0x02,  // Section size
-                    0x01,  // Number of functions
-                    0x00   // Type index
+                    0x03, 0x02, 0x01, 0x00
                 ]);
 
-                // Code section (section id = 10)
                 const codeSection = new Uint8Array([
-                    0x0a,  // Section id
-                    0x09,  // Section size
-                    0x01,  // Number of functions
-                    0x07,  // Function body size
-                    0x00,  // Local declarations count
-                    0x20, 0x00,  // local.get 0
-                    0x20, 0x01,  // local.get 1
-                    0x6a,  // i32.add
-                    0x0b   // end
+                    0x0a, 0x09, 0x01, 0x07,
+                    0x00, 0x20, 0x00, 0x20,
+                    0x01, 0x6a, 0x0b
                 ]);
 
-                // Export section (section id = 7)
                 const exportSection = new Uint8Array([
-                    0x07,  // Section id
-                    0x09,  // Section size
-                    0x01,  // Number of exports
-                    0x03,  // Name length
-                    0x61, 0x64, 0x64,  // "add"
-                    0x00,  // Export kind (function)
-                    0x00   // Function index
+                    0x07, 0x09, 0x01, 0x03,
+                    0x61, 0x64, 0x64, 0x00, 0x00
                 ]);
 
-                // Combine all sections
                 const totalSize = header.length + typeSection.length + functionSection.length + 
                                  codeSection.length + exportSection.length;
                 
@@ -363,16 +431,12 @@ extern &quot;C&quot; {
                 
                 wasmBinary.set(header, offset);
                 offset += header.length;
-                
                 wasmBinary.set(typeSection, offset);
                 offset += typeSection.length;
-                
                 wasmBinary.set(functionSection, offset);
                 offset += functionSection.length;
-                
                 wasmBinary.set(codeSection, offset);
                 offset += codeSection.length;
-                
                 wasmBinary.set(exportSection, offset);
 
                 return wasmBinary;
@@ -394,72 +458,66 @@ extern &quot;C&quot; {
             async function compileCode() {
                 const code = cppInput.value.trim();
                 if (!code) {
-                    setStatus('error', 'Hata: Boş kaynak kod');
-                    alert('Lütfen derlenecek bir C++ kodu girin.');
+                    setStatus('error', 'Boş kaynak kod');
+                    showToast('Lütfen C++ kodu girin!', 'error');
                     return;
                 }
 
-                // UI State: Compiling
                 setStatus('compiling', 'Derleniyor...');
                 compileBtn.disabled = true;
                 compileBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                compileBtn.style.pointerEvents = 'none';
+                
                 downloadBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 downloadBtn.style.pointerEvents = 'none';
+                
                 loadingOverlay.classList.remove('hidden');
 
                 const steps = [
                     "Parsing C++ source...",
                     "Running LLVM Optimizer...",
-                    "Generating WebAssembly bytecode...",
-                    "Linking standard libraries...",
+                    "Generating WebAssembly...",
+                    "Linking libraries...",
                     "Finalizing output..."
                 ];
 
-                // Simulate async compilation steps
                 for (let i = 0; i < steps.length; i++) {
                     loadingText.innerText = steps[i];
-                    await new Promise(r => setTimeout(r, 500));
+                    await new Promise(r => setTimeout(r, 400));
                 }
 
-                // Generate WASM binary
                 compiledWasmData = generateWasmBinary(code);
-                
-                // Update output display
                 const hexDump = generateHexDump(compiledWasmData);
                 wasmOutput.value = hexDump;
                 
-                // Update UI
                 updateLineNumbers(wasmOutput, lineNumbersWasm);
                 fileSize.innerText = formatBytes(compiledWasmData.length);
                 
                 loadingOverlay.classList.add('hidden');
-                setStatus('success', 'Derleme Başarılı');
+                setStatus('success', 'Derleme başarılı');
                 
                 compileBtn.disabled = false;
                 compileBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                compileBtn.style.pointerEvents = 'auto';
+                
+                downloadBtn.disabled = false;
                 downloadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 downloadBtn.style.pointerEvents = 'auto';
+                
+                showToast('WebAssembly dosyası hazır!');
             }
 
-            // Download Function - Fixed version
+            // Download Function
             function downloadWasm() {
-                console.log('Download function called');
-                console.log('compiledWasmData:', compiledWasmData);
-                
                 if (!compiledWasmData || compiledWasmData.length === 0) {
-                    setStatus('error', 'Hata: İndirilecek dosya yok');
-                    alert('Önce bir kod derleyin!');
+                    setStatus('error', 'Dosya yok');
+                    showToast('Önce kod derleyin!', 'error');
                     return;
                 }
                 
                 try {
-                    // Create blob from Uint8Array
                     const blob = new Blob([compiledWasmData], { type: 'application/wasm' });
-                    console.log('Blob created:', blob);
-                    
-                    // Create download link
                     const url = window.URL.createObjectURL(blob);
-                    console.log('URL created:', url);
                     
                     const link = document.createElement('a');
                     link.href = url;
@@ -470,17 +528,15 @@ extern &quot;C&quot; {
                     link.click();
                     document.body.removeChild(link);
                     
-                    // Clean up
                     setTimeout(() => {
                         window.URL.revokeObjectURL(url);
                     }, 100);
                     
-                    setStatus('success', 'İndirme başlatıldı');
-                    console.log('Download initiated successfully');
+                    showToast('İndirme başlatıldı!');
                 } catch (error) {
                     console.error('Download error:', error);
                     setStatus('error', 'İndirme hatası');
-                    alert('İndirme sırasında bir hata oluştu: ' + error.message);
+                    showToast('İndirme hatası: ' + error.message, 'error');
                 }
             }
 
@@ -489,19 +545,23 @@ extern &quot;C&quot; {
                 wasmOutput.value = "";
                 compiledWasmData = null;
                 fileSize.innerText = "0 KB";
+                
+                downloadBtn.disabled = true;
                 downloadBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 downloadBtn.style.pointerEvents = 'none';
+                
                 updateLineNumbers(cppInput, lineNumbersCpp);
                 updateLineNumbers(wasmOutput, lineNumbersWasm);
                 setStatus('ready', 'Hazır');
                 cppInput.focus();
+                showToast('Editör temizlendi');
             }
 
             function formatBytes(bytes, decimals = 2) {
                 if (!bytes || bytes === 0) return '0 Bytes';
                 const k = 1024;
                 const dm = decimals < 0 ? 0 : decimals;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const sizes = ['B', 'KB', 'MB', 'GB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
             }
@@ -517,15 +577,26 @@ extern &quot;C&quot; {
                 }
             });
 
+            // Handle window resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    updateLineNumbers(cppInput, lineNumbersCpp);
+                    updateLineNumbers(wasmOutput, lineNumbersWasm);
+                }, 200);
+            });
+
             // Attach event listeners
             compileBtn.addEventListener('click', compileCode);
             downloadBtn.addEventListener('click', downloadWasm);
             clearBtn.addEventListener('click', clearAll);
 
-            // Make downloadWasm globally accessible (for onclick attribute)
+            // Make functions globally accessible
             window.downloadWasm = downloadWasm;
+            window.compileCode = compileCode;
+            window.clearAll = clearAll;
         })();
     </script>
 </body>
 </html>
-
