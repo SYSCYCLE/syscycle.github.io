@@ -4,18 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>C++ to WebAssembly Compiler</title>
-    
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script>
         tailwind.config = {
             theme: {
@@ -113,8 +106,7 @@
         textarea.code-editor::placeholder {
             color: #475569;
         }
-
-        /* Custom Scrollbar */
+        
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -146,7 +138,6 @@
             animation: pulse-glow 1.5s infinite;
         }
 
-        /* Mobile optimizations */
         @media (max-width: 639px) {
             .mobile-full {
                 width: 100vw;
@@ -159,7 +150,6 @@
             }
         }
 
-        /* Prevent zoom on input focus */
         @media (max-width: 768px) {
             input, textarea, select {
                 font-size: 16px !important;
@@ -168,8 +158,6 @@
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
-
-    <!-- Header -->
     <header class="h-14 sm:h-16 border-b border-dark-700 bg-dark-900/95 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 z-20 shrink-0">
         <div class="flex items-center gap-2 sm:gap-3">
             <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-cpp to-wasm flex items-center justify-center text-white font-bold text-sm sm:text-xl shadow-lg shrink-0">
@@ -191,13 +179,8 @@
             </a>
         </div>
     </header>
-
-    <!-- Main Content -->
     <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative min-h-0">
-        <!-- Background Image Overlay -->
         <div class="absolute inset-0 z-0 opacity-5 sm:opacity-10 pointer-events-none" style="background-image: url('https://image.qwenlm.ai/public_source/f768ec86-843f-4108-98c6-3dd76524afe9/10bef9e66-6847-43a6-858f-9289878d6989.png'); background-size: cover; background-position: center;"></div>
-
-        <!-- Left Panel: C++ Input -->
         <section class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-dark-700 relative z-10 bg-dark-900/95 min-h-[40vh] md:min-h-0">
             <div class="h-9 sm:h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-3 sm:px-4 shrink-0">
                 <div class="flex items-center gap-1 sm:gap-2 min-w-0">
@@ -219,8 +202,6 @@
                 <textarea id="cppInput" class="code-editor" spellcheck="false" placeholder="// C++ kodunuzu buraya yazın..."></textarea>
             </div>
         </section>
-
-        <!-- Right Panel: Wasm Output -->
         <section class="flex-1 flex flex-col relative z-10 bg-dark-900/95 min-h-[40vh] md:min-h-0">
             <div class="h-9 sm:h-10 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-3 sm:px-4 shrink-0">
                 <div class="flex items-center gap-1 sm:gap-2 min-w-0">
@@ -240,7 +221,6 @@
                 <div class="line-numbers" id="lineNumbersWasm">1</div>
                 <textarea id="wasmOutput" class="code-editor text-slate-400" readonly placeholder="Derleme sonucu burada görünecek..."></textarea>
                 
-                <!-- Loading Overlay -->
                 <div id="loadingOverlay" class="absolute inset-0 bg-dark-900/95 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20 p-4">
                     <div class="w-12 h-12 sm:w-16 sm:h-16 border-4 border-wasm border-t-transparent rounded-full animate-spin mb-3 sm:mb-4"></div>
                     <h3 class="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2 text-center">Derleniyor...</h3>
@@ -250,7 +230,6 @@
         </section>
     </main>
 
-    <!-- Footer / Toolbar -->
     <footer class="h-12 sm:h-14 bg-dark-800 border-t border-dark-700 flex items-center justify-between px-3 sm:px-6 z-20 shrink-0">
         <div class="flex items-center gap-2 sm:gap-4">
             <button id="compileBtn" class="bg-wasm hover:bg-indigo-600 active:bg-indigo-700 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all shadow-lg shadow-indigo-900/20 flex items-center gap-1.5 sm:gap-2 touch-target shrink-0">
@@ -274,7 +253,6 @@
         </div>
     </footer>
 
-    <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 bg-dark-800 border border-dark-700 text-white px-4 py-2 rounded-lg shadow-xl transform translate-y-full opacity-0 transition-all duration-300 z-50 flex items-center gap-2 text-sm">
         <i class="fa-solid fa-check-circle text-emerald-500"></i>
         <span id="toastMessage">İşlem başarılı</span>
@@ -282,7 +260,6 @@
 
     <script>
         (function() {
-            // DOM Elements
             const cppInput = document.getElementById('cppInput');
             const wasmOutput = document.getElementById('wasmOutput');
             const lineNumbersCpp = document.getElementById('lineNumbersCpp');
@@ -300,10 +277,8 @@
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
 
-            // Global variable to store compiled WASM binary
             let compiledWasmData = null;
 
-            // Default C++ code
             const defaultCode = `// C++ to WebAssembly Example
 #include <emscripten.h>
 
@@ -324,29 +299,24 @@ extern "C" {
     }
 }`;
 
-            // Set default code on load
             cppInput.value = defaultCode;
 
-            // Update Line Numbers
             function updateLineNumbers(textarea, lineNumbersDiv) {
                 const lines = textarea.value.split('\n').length;
                 lineNumbersDiv.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
             }
 
-            // Sync Scroll
             function syncScroll(source, targetNumbers) {
                 source.addEventListener('scroll', () => {
                     targetNumbers.scrollTop = source.scrollTop;
                 });
             }
 
-            // Initialize
             updateLineNumbers(cppInput, lineNumbersCpp);
             updateLineNumbers(wasmOutput, lineNumbersWasm);
             syncScroll(cppInput, lineNumbersCpp);
             syncScroll(wasmOutput, lineNumbersWasm);
 
-            // Input Event Listeners
             cppInput.addEventListener('input', () => {
                 updateLineNumbers(cppInput, lineNumbersCpp);
                 setStatus('ready', 'Değişiklikler var');
@@ -363,7 +333,6 @@ extern "C" {
                 cursorPos.innerText = line + ':' + col;
             }
 
-            // Status Management
             function setStatus(type, message) {
                 statusText.innerText = message;
                 statusDot.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full';
@@ -383,7 +352,6 @@ extern "C" {
                 }
             }
 
-            // Toast Notification
             function showToast(message, type = 'success') {
                 toastMessage.innerText = message;
                 const icon = toast.querySelector('i');
@@ -396,11 +364,10 @@ extern "C" {
                 }, 2500);
             }
 
-            // Generate WASM Binary
             function generateWasmBinary(sourceCode) {
                 const header = new Uint8Array([
-                    0x00, 0x61, 0x73, 0x6d,  // Magic number
-                    0x01, 0x00, 0x00, 0x00   // Version 1
+                    0x00, 0x61, 0x73, 0x6d,
+                    0x01, 0x00, 0x00, 0x00
                 ]);
 
                 const typeSection = new Uint8Array([
@@ -454,7 +421,6 @@ extern "C" {
                 return hex.trim();
             }
 
-            // Compile Code Function
             async function compileCode() {
                 const code = cppInput.value.trim();
                 if (!code) {
@@ -507,7 +473,6 @@ extern "C" {
                 showToast('WebAssembly dosyası hazır!');
             }
 
-            // Download Function
             function downloadWasm() {
                 if (!compiledWasmData || compiledWasmData.length === 0) {
                     setStatus('error', 'Dosya yok');
@@ -566,7 +531,6 @@ extern "C" {
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
             }
 
-            // Handle Tab key in textarea
             cppInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Tab') {
                     e.preventDefault();
@@ -577,7 +541,6 @@ extern "C" {
                 }
             });
 
-            // Handle window resize
             let resizeTimeout;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimeout);
@@ -587,12 +550,10 @@ extern "C" {
                 }, 200);
             });
 
-            // Attach event listeners
             compileBtn.addEventListener('click', compileCode);
             downloadBtn.addEventListener('click', downloadWasm);
             clearBtn.addEventListener('click', clearAll);
 
-            // Make functions globally accessible
             window.downloadWasm = downloadWasm;
             window.compileCode = compileCode;
             window.clearAll = clearAll;
