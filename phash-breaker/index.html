@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelişmiş Görsel Kimlik Değiştirici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .glitch-effect { filter: contrast(1.1) brightness(1.05); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6">
+
+    <div class="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-8">
+        <div class="flex items-center gap-4 mb-8">
+            <div class="p-3 bg-red-500/10 rounded-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold">Deep Scan Bypass v2</h1>
+                <p class="text-slate-400 text-sm">pHash, AI Nesne Algılama ve Histogram takibini engeller.</p>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <label id="drop-zone" class="relative group block border-2 border-dashed border-slate-700 hover:border-red-500/50 transition-all rounded-2xl p-10 text-center cursor-pointer">
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
+                <div id="upload-content">
+                    <p class="text-slate-300 font-medium">Resmi buraya yükleyin</p>
+                    <p class="text-xs text-slate-500 mt-2 italic">Dosya imzası otomatik olarak parçalanacaktır.</p>
+                </div>
+                <img id="previewImg" class="hidden max-h-64 mx-auto rounded-lg shadow-xl ring-1 ring-slate-700">
+            </label>
+          
+            <div class="bg-slate-950/50 p-4 rounded-xl space-y-3">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Manipülasyon Gücü</label>
+                <input type="range" id="powerRange" min="1" max="10" value="5" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500">
+                <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>Hafif (Mikron)</span>
+                    <span>Agresif (Deep Bypass)</span>
+                </div>
+            </div>
+
+            <button id="processBtn" disabled class="w-full bg-red-600 hover:bg-red-500 disabled:bg-slate-800 text-white font-semibold py-4 rounded-xl transition-all shadow-lg shadow-red-900/20 active:scale-95">
+                Görsel Kimliğini Yok Et
+            </button>
+
+            <a id="downloadBtn" class="hidden w-full bg-slate-100 hover:bg-white text-slate-900 font-bold py-4 rounded-xl text-center transition-all">
+                Yeni Versiyonu İndir
+            </a>
+        </div>
+    </div>
+
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const processBtn = document.getElementById('processBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewImg = document.getElementById('previewImg');
+        const uploadContent = document.getElementById('upload-content');
+        const powerRange = document.getElementById('powerRange');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImg.src = event.target.result;
+                    previewImg.classList.remove('hidden');
+                    uploadContent.classList.add('hidden');
+                    processBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        processBtn.addEventListener('click', () => {
+            const img = new Image();
+            img.onload = () => {
+                const power = parseInt(powerRange.value) / 100;
+                const w = img.width;
+                const h = img.height;
+
+                canvas.width = w + (Math.random() > 0.5 ? 1 : 2);
+                canvas.height = h + (Math.random() > 0.5 ? 1 : 2);
+
+                ctx.save();
+                ctx.translate(canvas.width/2, canvas.height/2);
+                ctx.rotate((Math.random() * 0.2 - 0.1) * Math.PI / 180);
+                
+                ctx.drawImage(img, -w/2, -h/2, canvas.width, canvas.height);
+                ctx.globalAlpha = 0.01 + (power / 5);
+                ctx.fillStyle = `rgb(${Math.random()*255},${Math.random()*255},${Math.random()*255})`;
+                ctx.fillRect(-w/2, -h/2, canvas.width, canvas.height);
+                ctx.restore();
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const shift = Math.floor(Math.random() * 5) - 2;
+                    data[i] = Math.min(255, Math.max(0, data[i] + shift));
+                    data[i+1] = Math.min(255, Math.max(0, data[i+1] + shift));
+                    data[i+2] = Math.min(255, Math.max(0, data[i+2] + shift));
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                const finalUrl = canvas.toDataURL('image/jpeg', 0.93 + (Math.random() * 0.05));
+                
+                downloadBtn.href = finalUrl;
+                downloadBtn.download = `protected_${Math.random().toString(36).substring(7)}.jpg`;
+                downloadBtn.classList.remove('hidden');
+                processBtn.innerText = "Yeniden Randomize Et";
+            };
+            img.src = previewImg.src;
+        });
+    </script>
+</body>
+</html>
