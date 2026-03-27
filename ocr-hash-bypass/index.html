@@ -2,693 +2,80 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImageMod Pro - OCR Bypass Aracı</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@4.5.15/index.css" rel="stylesheet">
+    <title>Profesyonel OCR Bozucu</title>
     <style>
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-        }
-        
-        .glass-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-        }
-        
-        .slider-container {
-            position: relative;
-        }
-        
-        .slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-        }
-        
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #4f46e5;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .slider::-webkit-slider-thumb:hover {
-            background: #6366f1;
-            transform: scale(1.1);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-            transition: all 0.3s;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-        
-        .canvas-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-        
-        #imageCanvas {
-            max-width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            transition: all 0.3s;
-        }
-        
-        .upload-area:hover {
-            border-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.1);
-        }
-        
-        .upload-area.dragover {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.2);
-        }
-        
-        .effect-badge {
-            background: rgba(79, 70, 229, 0.2);
-            border: 1px solid rgba(79, 70, 229, 0.5);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-        
-        .effect-badge.active {
-            background: rgba(79, 70, 229, 0.8);
-            border-color: #4f46e5;
-        }
-        
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #4f46e5;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .toast {
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
+        body { background: #000; color: #ccc; font-family: sans-serif; text-align: center; padding: 40px; }
+        .box { border: 1px dashed #444; padding: 20px; display: inline-block; background: #111; border-radius: 8px; }
+        canvas { border: 1px solid #222; margin-top: 20px; max-width: 100%; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:hover { background: #0056b3; }
+        input[type="file"] { margin-bottom: 20px; }
     </style>
 </head>
-<body class="text-white">
-    <div class="container mx-auto px-4 py-8 max-w-7xl">
-        <!-- Header -->
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                ImageMod Pro
-            </h1>
-            <p class="text-gray-400">OCR Yanlış Algılamalarını Önleme Aracı</p>
-        </header>
+<body>
 
-        <div class="grid lg:grid-cols-3 gap-6">
-            <!-- Image Preview Area -->
-            <div class="lg:col-span-2">
-                <div class="glass-card p-6">
-                    <div id="uploadArea" class="upload-area rounded-xl p-8 text-center cursor-pointer mb-4">
-                        <input type="file" id="fileInput" accept="image/*" class="hidden">
-                        <div id="uploadContent">
-                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <p class="text-lg mb-2">Görsel Sürükle & Bırak</p>
-                            <p class="text-sm text-gray-400">veya tıklayarak seçin</p>
-                        </div>
-                        <div id="loadingIndicator" class="hidden">
-                            <div class="loading-spinner mx-auto mb-4"></div>
-                            <p>Görsel Yükleniyor...</p>
-                        </div>
-                    </div>
-
-                    <div class="canvas-container bg-gray-900 rounded-xl overflow-hidden" id="canvasContainer" style="display: none;">
-                        <canvas id="imageCanvas"></canvas>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex flex-wrap gap-3 mt-4" id="actionButtons" style="display: none;">
-                        <button onclick="applyPreset('light')" class="btn-secondary px-4 py-2 rounded-lg flex-1">
-                            🌤️ Hafif
-                        </button>
-                        <button onclick="applyPreset('medium')" class="btn-secondary px-4 py-2 rounded-lg flex-1">
-                            ⚡ Orta
-                        </button>
-                        <button onclick="applyPreset('strong')" class="btn-secondary px-4 py-2 rounded-lg flex-1">
-                            🔥 Güçlü
-                        </button>
-                        <button onclick="resetImage()" class="btn-secondary px-4 py-2 rounded-lg">
-                            🔄 Sıfırla
-                        </button>
-                        <button onclick="downloadImage()" class="btn-primary px-6 py-2 rounded-lg">
-                            💾 İndir
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Applied Effects -->
-                <div class="glass-card p-6 mt-6" id="effectsPanel" style="display: none;">
-                    <h3 class="text-lg font-semibold mb-4">Aktif Efektler</h3>
-                    <div class="flex flex-wrap gap-2" id="activeEffects">
-                        <!-- Dynamic effect badges will be added here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Controls Panel -->
-            <div class="lg:col-span-1">
-                <div class="glass-card p-6">
-                    <h3 class="text-lg font-semibold mb-6">🎛️ Ayarlar</h3>
-
-                    <!-- Noise -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Gürültü (Noise)</label>
-                            <span id="noiseValue" class="text-sm text-indigo-400">0%</span>
-                        </div>
-                        <input type="range" id="noiseSlider" class="slider" min="0" max="100" value="0" oninput="updateSlider('noise', this.value)">
-                    </div>
-
-                    <!-- Blur -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Bulanıklık (Blur)</label>
-                            <span id="blurValue" class="text-sm text-indigo-400">0px</span>
-                        </div>
-                        <input type="range" id="blurSlider" class="slider" min="0" max="10" value="0" step="0.5" oninput="updateSlider('blur', this.value)">
-                    </div>
-
-                    <!-- Contrast -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Kontrast</label>
-                            <span id="contrastValue" class="text-sm text-indigo-400">100%</span>
-                        </div>
-                        <input type="range" id="contrastSlider" class="slider" min="50" max="200" value="100" oninput="updateSlider('contrast', this.value)">
-                    </div>
-
-                    <!-- Brightness -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Parlaklık</label>
-                            <span id="brightnessValue" class="text-sm text-indigo-400">100%</span>
-                        </div>
-                        <input type="range" id="brightnessSlider" class="slider" min="50" max="150" value="100" oninput="updateSlider('brightness', this.value)">
-                    </div>
-
-                    <!-- Saturation -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Doygunluk</label>
-                            <span id="saturationValue" class="text-sm text-indigo-400">100%</span>
-                        </div>
-                        <input type="range" id="saturationSlider" class="slider" min="0" max="200" value="100" oninput="updateSlider('saturation', this.value)">
-                    </div>
-
-                    <!-- Distortion -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Distorsiyon</label>
-                            <span id="distortionValue" class="text-sm text-indigo-400">0%</span>
-                        </div>
-                        <input type="range" id="distortionSlider" class="slider" min="0" max="50" value="0" oninput="updateSlider('distortion', this.value)">
-                    </div>
-
-                    <!-- Grain -->
-                    <div class="slider-container mb-6">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Film Grain</label>
-                            <span id="grainValue" class="text-sm text-indigo-400">0%</span>
-                        </div>
-                        <input type="range" id="grainSlider" class="slider" min="0" max="100" value="0" oninput="updateSlider('grain', this.value)">
-                    </div>
-
-                    <!-- Overlay Pattern -->
-                    <div class="mb-6">
-                        <label class="text-sm block mb-2">Desen Katmanı</label>
-                        <select id="overlaySelect" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white" onchange="updateOverlay()">
-                            <option value="none">Yok</option>
-                            <option value="dots">Noktalar</option>
-                            <option value="lines">Çizgiler</option>
-                            <option value="grid">Izgara</option>
-                            <option value="noise">Statik</option>
-                        </select>
-                    </div>
-
-                    <!-- Overlay Opacity -->
-                    <div class="slider-container">
-                        <div class="flex justify-between mb-2">
-                            <label class="text-sm">Desen Opaklık</label>
-                            <span id="overlayOpacityValue" class="text-sm text-indigo-400">20%</span>
-                        </div>
-                        <input type="range" id="overlayOpacitySlider" class="slider" min="0" max="100" value="20" oninput="updateSlider('overlayOpacity', this.value)">
-                    </div>
-                </div>
-
-                <!-- Info Panel -->
-                <div class="glass-card p-6 mt-6">
-                    <h3 class="text-lg font-semibold mb-4">ℹ️ Bilgi</h3>
-                    <p class="text-sm text-gray-400 mb-4">
-                        Bu araç, OCR sistemlerinin yanlış algılamalarını önlemek için görsellerinizi hafifçe değiştirir.
-                    </p>
-                    <ul class="text-sm text-gray-400 space-y-2">
-                        <li>• Görsel kalitesi korunur</li>
-                        <li>• İnsan gözüyle fark edilmez</li>
-                        <li>• OCR algoritmalarını atlatır</li>
-                        <li>• Tüm formatlar desteklenir</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div id="toast" class="fixed bottom-4 right-4 glass-card px-6 py-4 rounded-lg transform translate-x-full transition-transform duration-300">
-            <span id="toastMessage"></span>
-        </div>
+    <div class="box">
+        <h3>Görünmez OCR Koruması</h3>
+        <input type="file" id="loader" accept="image/*"><br>
+        <button onclick="applyShift()">Görünmez Korumayı Uygula</button>
+        <button onclick="download()" style="background: #28a745;">Kaydet</button>
     </div>
 
+    <br>
+    <canvas id="c"></canvas>
+
     <script>
-        let originalImage = null;
-        let canvas, ctx;
-        let settings = {
-            noise: 0,
-            blur: 0,
-            contrast: 100,
-            brightness: 100,
-            saturation: 100,
-            distortion: 0,
-            grain: 0,
-            overlay: 'none',
-            overlayOpacity: 20
-        };
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let img = new Image();
 
-        const presets = {
-            light: { noise: 15, blur: 0.5, contrast: 105, brightness: 102, saturation: 98, distortion: 5, grain: 10, overlay: 'dots', overlayOpacity: 15 },
-            medium: { noise: 30, blur: 1, contrast: 110, brightness: 105, saturation: 95, distortion: 10, grain: 20, overlay: 'lines', overlayOpacity: 25 },
-            strong: { noise: 50, blur: 2, contrast: 120, brightness: 110, saturation: 90, distortion: 20, grain: 35, overlay: 'grid', overlayOpacity: 35 }
-        };
-
-        function init() {
-            canvas = document.getElementById('imageCanvas');
-            ctx = canvas.getContext('2d');
-
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('fileInput');
-
-            uploadArea.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleFileSelect);
-
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    loadImage(files[0]);
-                }
-            });
-        }
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                loadImage(file);
-            }
-        }
-
-        function loadImage(file) {
-            document.getElementById('uploadContent').classList.add('hidden');
-            document.getElementById('loadingIndicator').classList.remove('hidden');
-
+        document.getElementById('loader').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
+            reader.onload = (event) => {
                 img.onload = () => {
-                    originalImage = img;
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    canvas.style.maxWidth = '100%';
-                    
-                    document.getElementById('canvasContainer').style.display = 'block';
-                    document.getElementById('actionButtons').style.display = 'flex';
-                    document.getElementById('effectsPanel').style.display = 'block';
-                    document.getElementById('loadingIndicator').classList.add('hidden');
-                    document.getElementById('uploadContent').classList.remove('hidden');
-                    
-                    resetSettings();
-                    renderImage();
-                    showToast('Görsel yüklendi!');
+                    ctx.drawImage(img, 0, 0);
                 };
-                img.src = e.target.result;
+                img.src = event.target.result;
             };
-            reader.readAsDataURL(file);
-        }
+            reader.readAsDataURL(e.target.files[0]);
+        };
 
-        function resetSettings() {
-            settings = {
-                noise: 0,
-                blur: 0,
-                contrast: 100,
-                brightness: 100,
-                saturation: 100,
-                distortion: 0,
-                grain: 0,
-                overlay: 'none',
-                overlayOpacity: 20
-            };
-
-            document.getElementById('noiseSlider').value = 0;
-            document.getElementById('blurSlider').value = 0;
-            document.getElementById('contrastSlider').value = 100;
-            document.getElementById('brightnessSlider').value = 100;
-            document.getElementById('saturationSlider').value = 100;
-            document.getElementById('distortionSlider').value = 0;
-            document.getElementById('grainSlider').value = 0;
-            document.getElementById('overlaySelect').value = 'none';
-            document.getElementById('overlayOpacitySlider').value = 20;
-
-            updateAllSliderValues();
-        }
-
-        function updateSlider(name, value) {
-            settings[name] = name === 'overlay' ? value : parseFloat(value);
-            updateSliderValue(name, value);
-            renderImage();
-        }
-
-        function updateSliderValue(name, value) {
-            const suffix = name === 'blur' ? 'px' : name === 'overlayOpacity' ? '%' : '%';
-            const displayValue = name === 'overlay' ? value : value + suffix;
-            document.getElementById(name + 'Value').textContent = displayValue;
-        }
-
-        function updateAllSliderValues() {
-            updateSliderValue('noise', settings.noise);
-            updateSliderValue('blur', settings.blur);
-            updateSliderValue('contrast', settings.contrast);
-            updateSliderValue('brightness', settings.brightness);
-            updateSliderValue('saturation', settings.saturation);
-            updateSliderValue('distortion', settings.distortion);
-            updateSliderValue('grain', settings.grain);
-            updateSliderValue('overlayOpacity', settings.overlayOpacity);
-        }
-
-        function updateOverlay() {
-            settings.overlay = document.getElementById('overlaySelect').value;
-            renderImage();
-        }
-
-        function applyPreset(level) {
-            const preset = presets[level];
-            Object.keys(preset).forEach(key => {
-                settings[key] = preset[key];
-                const slider = document.getElementById(key + 'Slider');
-                if (slider) {
-                    slider.value = preset[key];
-                }
-            });
-            
-            if (settings.overlay !== 'none') {
-                document.getElementById('overlaySelect').value = settings.overlay;
-            }
-
-            updateAllSliderValues();
-            renderImage();
-            showToast(`${level === 'light' ? 'Hafif' : level === 'medium' ? 'Orta' : 'Güçlü'} preset uygulandı!`);
-        }
-
-        function resetImage() {
-            resetSettings();
-            renderImage();
-            showToast('Ayarlar sıfırlandı!');
-        }
-
-        function renderImage() {
-            if (!originalImage) return;
-
-            canvas.width = originalImage.width;
-            canvas.height = originalImage.height;
-
-            ctx.filter = `
-                contrast(${settings.contrast}%)
-                brightness(${settings.brightness}%)
-                saturate(${settings.saturation}%)
-                blur(${settings.blur}px)
-            `;
-
-            ctx.drawImage(originalImage, 0, 0);
-            ctx.filter = 'none';
-
-            if (settings.noise > 0) {
-                addNoise();
-            }
-
-            if (settings.grain > 0) {
-                addGrain();
-            }
-
-            if (settings.distortion > 0) {
-                addDistortion();
-            }
-
-            if (settings.overlay !== 'none') {
-                addOverlay();
-            }
-
-            updateActiveEffects();
-        }
-
-        function addNoise() {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const intensity = settings.noise / 100;
-
-            for (let i = 0; i < data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * 255 * intensity;
-                data[i] = Math.min(255, Math.max(0, data[i] + noise));
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        function addGrain() {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const intensity = settings.grain / 100;
-
-            for (let i = 0; i < data.length; i += 4) {
-                const grain = (Math.random() - 0.5) * 50 * intensity;
-                data[i] = Math.min(255, Math.max(0, data[i] + grain));
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + grain));
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + grain));
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        function addDistortion() {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        function applyShift() {
+            const w = canvas.width;
+            const h = canvas.height;
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.putImageData(imageData, 0, 0);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const distortion = settings.distortion / 100;
-
-            for (let y = 0; y < canvas.height; y++) {
-                const offset = Math.sin(y / 20) * distortion * 10;
-                ctx.drawImage(tempCanvas, 0, y, canvas.width, 1, offset, y, canvas.width, 1);
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            // Görseli çok ince dikey şeritlere böl (2px genişlikte)
+            const stripWidth = 2; 
+            
+            for (let x = 0; x < w; x += stripWidth) {
+                // Her şeridi rastgele 1 veya 2 piksel yukarı/aşağı kaydır
+                const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 2);
+                tCtx.drawImage(canvas, x, 0, stripWidth, h, x, offset, stripWidth, h);
+            }
+            
+            // Orijinal canvas'ı temizle ve kaydırılmış halini bas
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(tempCanvas, 0, 0);
+            
+            // OCR'ı tamamen kör etmek için: Çok ince, şeffaf bir 'ızgara' ekle (İnsan görmez)
+            ctx.strokeStyle = "rgba(255,255,255,0.03)"; 
+            for(let i=0; i<w; i+=4) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
             }
         }
 
-        function addOverlay() {
-            const overlayCanvas = document.createElement('canvas');
-            overlayCanvas.width = canvas.width;
-            overlayCanvas.height = canvas.height;
-            const overlayCtx = overlayCanvas.getContext('2d');
-
-            const opacity = settings.overlayOpacity / 100;
-
-            switch (settings.overlay) {
-                case 'dots':
-                    drawDotsPattern(overlayCtx, canvas.width, canvas.height, opacity);
-                    break;
-                case 'lines':
-                    drawLinesPattern(overlayCtx, canvas.width, canvas.height, opacity);
-                    break;
-                case 'grid':
-                    drawGridPattern(overlayCtx, canvas.width, canvas.height, opacity);
-                    break;
-                case 'noise':
-                    drawNoisePattern(overlayCtx, canvas.width, canvas.height, opacity);
-                    break;
-            }
-
-            ctx.drawImage(overlayCanvas, 0, 0);
+        function download() {
+            const a = document.createElement('a');
+            a.download = 'sys_cycle_protected.png';
+            a.href = canvas.toDataURL("image/png");
+            a.click();
         }
-
-        function drawDotsPattern(ctx, width, height, opacity) {
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.3})`;
-            const spacing = 8;
-            for (let x = 0; x < width; x += spacing) {
-                for (let y = 0; y < height; y += spacing) {
-                    if (Math.random() > 0.5) {
-                        ctx.beginPath();
-                        ctx.arc(x, y, 1, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            }
-        }
-
-        function drawLinesPattern(ctx, width, height, opacity) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.2})`;
-            ctx.lineWidth = 1;
-            const spacing = 4;
-            for (let x = 0; x < width; x += spacing) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-            }
-        }
-
-        function drawGridPattern(ctx, width, height, opacity) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.15})`;
-            ctx.lineWidth = 1;
-            const spacing = 16;
-            for (let x = 0; x < width; x += spacing) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < height; y += spacing) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-            }
-        }
-
-        function drawNoisePattern(ctx, width, height, opacity) {
-            const imageData = ctx.createImageData(width, height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                const value = Math.random() * 255 * opacity * 0.3;
-                data[i] = value;
-                data[i + 1] = value;
-                data[i + 2] = value;
-                data[i + 3] = 255;
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        function updateActiveEffects() {
-            const effects = [];
-            if (settings.noise > 0) effects.push('Gürültü');
-            if (settings.blur > 0) effects.push('Bulanıklık');
-            if (settings.contrast !== 100) effects.push('Kontrast');
-            if (settings.brightness !== 100) effects.push('Parlaklık');
-            if (settings.saturation !== 100) effects.push('Doygunluk');
-            if (settings.distortion > 0) effects.push('Distorsiyon');
-            if (settings.grain > 0) effects.push('Grain');
-            if (settings.overlay !== 'none') effects.push('Desen');
-
-            const container = document.getElementById('activeEffects');
-            container.innerHTML = effects.map(effect => 
-                `<span class="effect-badge active">${effect}</span>`
-            ).join('');
-
-            if (effects.length === 0) {
-                container.innerHTML = '<span class="text-gray-400 text-sm">Efekt uygulanmadı</span>';
-            }
-        }
-
-        function downloadImage() {
-            if (!originalImage) return;
-
-            const link = document.createElement('a');
-            link.download = 'imagemod-processed.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            showToast('Görsel indirildi!');
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            toastMessage.textContent = message;
-            toast.classList.remove('translate-x-full');
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
-        }
-
-        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
