@@ -2,11 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>FLV File to Canvas</title>
+    <title>FLV to Canvas</title>
+    <!-- Kütüphane -->
     <script src="https://cdn.jsdelivr.net/npm/flv.js/dist/flv.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        #canvasElement { border: 2px solid #333; margin-top: 10px; background: #000; }
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        #canvasElement { border: 2px solid #333; margin-top: 10px; background: #000; max-width: 100%; }
+        /* Video elementi görünmesin ama tarayıcıda var olsun */
         #videoElement { position: absolute; left: -9999px; }
     </style>
 </head>
@@ -17,6 +19,10 @@
     <br>
     <canvas id="canvasElement" width="640" height="360"></canvas>
 
+    <!-- GİZLİ VİDEO ELEMENTİ -->
+    <video id="videoElement" controls></video>
+
+    <!-- SCRIPT'İ BURAYA, EN SONA ALDIK -->
     <script>
         const fileInput = document.getElementById('fileInput');
         const video = document.getElementById('videoElement');
@@ -29,6 +35,7 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            // Varsa eski player'ı temizle
             if (flvPlayer) {
                 flvPlayer.pause();
                 flvPlayer.unload();
@@ -49,20 +56,21 @@
         });
 
         function drawFrame() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            // Video ve video verisi hazırsa çiz
+            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             }
             requestAnimationFrame(drawFrame);
         }
 
-        drawFrame();
-
+        // Canvas boyutlarını video yüklendiğinde güncelle
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
         });
-    </script>
-    <video id="videoElement" controls></video>
 
+        // Döngüyü başlat
+        drawFrame();
+    </script>
 </body>
 </html>
