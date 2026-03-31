@@ -45,15 +45,15 @@
 
             const mediaUrl = URL.createObjectURL(file);
 
-            flvPlayer = flvjs.createPlayer({
-                type: 'flv',
-                url: mediaUrl
-            });
-
-            flvPlayer.attachMediaElement(video);
-            flvPlayer.load();
-            flvPlayer.play();
-        });
+            // ... içindeki createPlayer kısmını şöyle güncelle:
+flvPlayer = flvjs.createPlayer({
+    type: 'flv',
+    url: mediaUrl
+}, {
+    enableWorker: false,       // Worker kullanımı bazen blob ile çakışır, kapatıyoruz.
+    enableStashBuffer: false,  // Buffer'ı kapatıyoruz.
+    stashInitialSize: 128      // Buffer boyutunu küçültüyoruz.
+});
 
         function drawFrame() {
             // Video ve video verisi hazırsa çiz
