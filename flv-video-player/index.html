@@ -3,41 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <title>Wasm FLV Player</title>
-    <script src="https://jsdelivr.net" crossorigin="anonymous"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
     <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { background: #2a2a2a; padding: 2rem; border-radius: 12px; text-align: center; }
-        canvas { background: #000; margin-top: 20px; border: 2px solid #444; display: none; }
-        #status { margin-bottom: 1rem; color: #3498db; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        #status { color: #3498db; margin: 20px; font-weight: bold; }
+        canvas { background: #000; border: 2px solid #444; max-width: 100%; display: none; margin: 0 auto; }
+        .controls { background: #2a2a2a; padding: 20px; border-radius: 10px; display: inline-block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>FLV to Canvas (Wasm)</h2>
-    <div id="status">Wasm Modülü Bekleniyor...</div>
+<div class="controls">
+    <h2>FLV Wasm Player</h2>
+    <div id="status">Wasm Yükleniyor...</div>
     <input type="file" id="uploader" accept=".flv" disabled>
-    <br>
-    <canvas id="videoCanvas"></canvas>
 </div>
+<br>
+<canvas id="videoCanvas"></canvas>
 
 <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ log: true });
-    
-    const uploader = document.getElementById('uploader');
+    const ffmpeg = createFFmpeg({ 
+        log: true,
+        corePath: 'https://jsdelivr.net'
+    });
+
     const status = document.getElementById('status');
+    const uploader = document.getElementById('uploader');
     const canvas = document.getElementById('videoCanvas');
     const ctx = canvas.getContext('2d');
 
     async function init() {
         try {
-            status.innerHTML = "⏳ Wasm Çekirdeği Yükleniyor...";
             await ffmpeg.load();
-            status.innerHTML = "✅ Hazır! FLV dosyasını seçin.";
+            status.innerHTML = "✅ Hazır! FLV seçin.";
             uploader.disabled = false;
         } catch (e) {
-            status.innerHTML = "❌ HATA: Localhost veya HTTPS kullanmalısınız!";
+            status.innerHTML = "❌ Hata: Tarayıcı Wasm'ı engelledi.";
             console.error(e);
         }
     }
@@ -46,27 +49,25 @@
         const file = e.target.files[0];
         if (!file) return;
 
-        status.innerHTML = "⏳ Dekode ediliyor...";
+        status.innerHTML = "⏳ İşleniyor...";
         
-        await ffmpeg.FS('writeFile', 'input.flv', await fetchFile(file));
-
-        await ffmpeg.run('-i', 'input.flv', '-t', '1', '-f', 'image2', 'frame%d.png');
+        await ffmpeg.FS('writeFile', 'test.flv', await fetchFile(file));
+        await ffmpeg.run('-i', 'test.flv', '-ss', '00:00:01', '-frames:v', '1', 'out.png');
 
         try {
-            const data = ffmpeg.FS('readFile', 'frame1.png');
+            const data = ffmpeg.FS('readFile', 'out.png');
             const url = URL.createObjectURL(new Blob([data.buffer], { type: 'image/png' }));
-            
             const img = new Image();
             img.onload = () => {
                 canvas.width = img.width;
                 canvas.height = img.height;
                 canvas.style.display = "block";
                 ctx.drawImage(img, 0, 0);
-                status.innerHTML = "✅ Kare yakalandı!";
+                status.innerHTML = "✅ Görüntü Dekode Edildi.";
             };
             img.src = url;
         } catch (err) {
-            status.innerHTML = "❌ Dosya okunamadı veya geçersiz FLV.";
+            status.innerHTML = "❌ Hata: Kare okunamadı.";
         }
     });
 
