@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasm FLV Player (Single File)</title>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { background: #2a2a2a; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+        canvas { background: #000; margin-top: 20px; border-radius: 8px; max-width: 100%; height: auto; display: none; }
+        #status { color: #aaa; margin-bottom: 1rem; }
+        input[type="file"] { margin: 1rem 0; color: #fff; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>FLV to Canvas (Wasm)</h2>
+    <div id="status"><span class="loader"></span>Wasm Modülü Yükleniyor...</div>
+    
+    <input type="file" id="uploader" accept=".flv" disabled>
+    <br>
+    <canvas id="videoCanvas"></canvas>
+</div>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+    
+    const uploader = document.getElementById('uploader');
+    const status = document.getElementById('status');
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    async function init() {
+        try {
+            await ffmpeg.load();
+            status.innerHTML = "✅ Wasm Hazır. Bir FLV dosyası seçin.";
+            uploader.disabled = false;
+        } catch (e) {
+            status.innerHTML = "❌ Hata: SharedArrayBuffer hatası! (CORS başlıklarını kontrol edin)";
+            console.error(e);
+        }
+    }
+
+    uploader.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        status.innerHTML = "⏳ İşleniyor (Dekode ediliyor)...";
+        
+        ffmpeg.FS('writeFile', 'input.flv', await fetchFile(file));
+
+        await ffmpeg.run('-i', 'input.flv', '-t', '1', '-f', 'image2', 'frame%d.png');
+
+        const data = ffmpeg.FS('readFile', 'frame1.png');
+        const url = URL.createObjectURL(new Blob([data.buffer], { type: 'image/png' }));
+        
+        const img = new Image();
+        img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.style.display = "block";
+            ctx.drawImage(img, 0, 0);
+            status.innerHTML = "✅ İlk kare görüntülendi (FLV başarıyla çözüldü).";
+        };
+        img.src = url;
+    });
+
+    init();
+</script>
+
+</body>
+</html>
