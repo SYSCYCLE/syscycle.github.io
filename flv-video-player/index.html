@@ -2,76 +2,67 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Wasm FLV Player</title>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
+    <title>FLV File to Canvas</title>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js/dist/flv.min.js"></script>
     <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
-        #status { color: #3498db; margin: 20px; font-weight: bold; }
-        canvas { background: #000; border: 2px solid #444; max-width: 100%; display: none; margin: 0 auto; }
-        .controls { background: #2a2a2a; padding: 20px; border-radius: 10px; display: inline-block; }
+        body { font-family: sans-serif; padding: 20px; }
+        #canvasElement { border: 2px solid #333; margin-top: 10px; background: #000; }
+        #videoElement { position: absolute; left: -9999px; }
     </style>
 </head>
 <body>
 
-<div class="controls">
-    <h2>FLV Wasm Player</h2>
-    <div id="status">Wasm Yükleniyor...</div>
-    <input type="file" id="uploader" accept=".flv" disabled>
-</div>
-<br>
-<canvas id="videoCanvas"></canvas>
+    <h2>FLV Dosyası Yükle ve Canvas'ta Oynat</h2>
+    <input type="file" id="fileInput" accept=".flv">
+    <br>
+    <canvas id="canvasElement" width="640" height="360"></canvas>
 
-<script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ 
-        log: true,
-        corePath: 'https://jsdelivr.net'
-    });
-
-    const status = document.getElementById('status');
-    const uploader = document.getElementById('uploader');
-    const canvas = document.getElementById('videoCanvas');
-    const ctx = canvas.getContext('2d');
-
-    async function init() {
-        try {
-            await ffmpeg.load();
-            status.innerHTML = "✅ Hazır! FLV seçin.";
-            uploader.disabled = false;
-        } catch (e) {
-            status.innerHTML = "❌ Hata: Tarayıcı Wasm'ı engelledi.";
-            console.error(e);
-        }
-    }
-
-    uploader.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        status.innerHTML = "⏳ İşleniyor...";
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvasElement');
+        const ctx = canvas.getContext('2d');
         
-        await ffmpeg.FS('writeFile', 'test.flv', await fetchFile(file));
-        await ffmpeg.run('-i', 'test.flv', '-ss', '00:00:01', '-frames:v', '1', 'out.png');
+        let flvPlayer = null;
 
-        try {
-            const data = ffmpeg.FS('readFile', 'out.png');
-            const url = URL.createObjectURL(new Blob([data.buffer], { type: 'image/png' }));
-            const img = new Image();
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                canvas.style.display = "block";
-                ctx.drawImage(img, 0, 0);
-                status.innerHTML = "✅ Görüntü Dekode Edildi.";
-            };
-            img.src = url;
-        } catch (err) {
-            status.innerHTML = "❌ Hata: Kare okunamadı.";
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (flvPlayer) {
+                flvPlayer.pause();
+                flvPlayer.unload();
+                flvPlayer.detachMediaElement();
+                flvPlayer.destroy();
+            }
+
+            const mediaUrl = URL.createObjectURL(file);
+
+            flvPlayer = flvjs.createPlayer({
+                type: 'flv',
+                url: mediaUrl
+            });
+
+            flvPlayer.attachMediaElement(video);
+            flvPlayer.load();
+            flvPlayer.play();
+        });
+
+        function drawFrame() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+            requestAnimationFrame(drawFrame);
         }
-    });
 
-    init();
-</script>
+        drawFrame();
+
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        });
+    </script>
+    <video id="videoElement" controls></video>
+
 </body>
 </html>
