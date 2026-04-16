@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Modern HTML5 Video Player</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -44,12 +44,15 @@
             display: flex;
             align-items: center;
             user-select: none;
+            cursor: pointer;
+            touch-action: manipulation;
         }
 
         video {
             width: 100%;
             height: 100%;
             display: block;
+            pointer-events: none;
         }
 
         .video-controls {
@@ -60,15 +63,17 @@
             padding: 20px;
             background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
             opacity: 0;
-            transition: opacity 0.3s ease;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
             display: flex;
             flex-direction: column;
             gap: 10px;
             z-index: 20;
         }
 
-        .video-container:hover .video-controls {
+        .video-container.show-controls .video-controls {
             opacity: 1;
+            visibility: visible;
         }
 
         .progress-area {
@@ -79,10 +84,12 @@
             border-radius: 10px;
             position: relative;
             transition: height 0.1s ease;
+            display: flex;
+            align-items: center;
         }
 
-        .progress-area:hover {
-            height: 7px;
+        .progress-area:hover, .progress-area.dragging {
+            height: 8px;
         }
 
         .progress-bar {
@@ -91,6 +98,26 @@
             background-color: var(--primary-color);
             border-radius: 10px;
             position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .progress-area:hover .progress-bar::after, 
+        .progress-area.dragging .progress-bar::after {
+            opacity: 1;
         }
 
         .controls-main {
@@ -120,11 +147,6 @@
 
         .control-btn:hover {
             color: var(--primary-color);
-        }
-
-        .control-btn:active {
-            opacity: 0.7;
-            transform: scale(0.95);
         }
 
         .time-display {
@@ -159,12 +181,7 @@
             height: 12px;
             width: 12px;
             background: #fff;
-            cursor: pointer;
             box-shadow: -80px 0 0 80px var(--primary-color);
-        }
-
-        .speed-control {
-            position: relative;
         }
 
         .speed-menu {
@@ -177,7 +194,6 @@
             min-width: 120px;
             display: none;
             flex-direction: column;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 30;
@@ -198,11 +214,8 @@
             color: white;
             font-size: 13px;
             cursor: pointer;
-            transition: background 0.2s ease;
-            text-align: left;
             display: flex;
             justify-content: space-between;
-            align-items: center;
         }
 
         .speed-item:hover {
@@ -215,12 +228,27 @@
             font-weight: 600;
         }
 
-        .speed-item.selected::after {
-            content: "";
-            width: 6px;
-            height: 6px;
-            background-color: var(--primary-color);
-            border-radius: 50%;
+        /* 2x Bilgi Kutusu */
+        .speed-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .speed-badge.active {
+            display: flex;
         }
 
         .overlay-play {
@@ -235,23 +263,53 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            opacity: 0.85;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 5;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-        }
-
-        .video-container.playing .overlay-play {
             opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 5;
             pointer-events: none;
-            transform: translate(-50%, -50%) scale(0.8);
         }
 
+        .video-container.show-controls:not(.playing) .overlay-play,
         .video-container.ended .overlay-play {
             opacity: 0.95;
+            visibility: visible;
             pointer-events: auto;
-            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .seek-ripple {
+            position: absolute;
+            top: 0;
+            width: 40%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .seek-ripple.left { left: 0; border-radius: 0 50% 50% 0; }
+        .seek-ripple.right { right: 0; border-radius: 50% 0 0 50%; }
+
+        .seek-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            margin-top: 8px;
+        }
+
+        .seek-ripple.active {
+            animation: rippleAnim 0.7s ease-out;
+        }
+
+        @keyframes rippleAnim {
+            0% { opacity: 0; transform: scale(0.8); }
+            30% { opacity: 1; }
+            100% { opacity: 0; transform: scale(1.2); }
         }
 
         svg {
@@ -265,14 +323,27 @@
 </head>
 <body>
 
-    <div class="video-container" id="video_player">
-        <video id="main_video" playsinline preload="metadata">
+    <div class="video-container show-controls" id="video_player">
+        <video id="main_video" playsinline preload="auto">
             <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-            Tarayıcınız video oynatmayı desteklemiyor.
         </video>
 
+        <div class="speed-badge" id="speed_badge">
+            <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+            <span>2x Oynatılıyor</span>
+        </div>
+
+        <div class="seek-ripple left" id="ripple_left">
+            <i data-lucide="chevrons-left" style="width: 40px; height: 40px;"></i>
+            <span class="seek-text">« 10</span>
+        </div>
+        <div class="seek-ripple right" id="ripple_right">
+            <i data-lucide="chevrons-right" style="width: 40px; height: 40px;"></i>
+            <span class="seek-text">10 »</span>
+        </div>
+
         <div class="overlay-play" id="overlay_btn">
-            <i data-lucide="play" style="width: 32px; height: 32px; color: white;"></i>
+            <i data-lucide="play" id="overlay_icon" style="width: 32px; height: 32px; color: white;"></i>
         </div>
 
         <div class="video-controls">
@@ -292,23 +363,21 @@
                         <input type="range" class="volume-slider" id="volume_slider" min="0" max="1" step="0.1" value="1">
                     </div>
                     <div class="time-display">
-                        <span id="current_time">0:00</span> / <span id="duration">0:00</span>
+                        <span id="current_time">0:00</span> / <span id="duration">...</span>
                     </div>
                 </div>
 
                 <div class="controls-right">
-                    <div class="speed-control">
-                        <button class="control-btn" id="speed_btn" title="Oynatma Hızı">
-                            <i data-lucide="gauge"></i>
-                        </button>
-                        <div class="speed-menu" id="speed_menu">
-                            <div class="speed-item" data-speed="0.5">0.5x</div>
-                            <div class="speed-item" data-speed="0.75">0.75x</div>
-                            <div class="speed-item selected" data-speed="1">Normal</div>
-                            <div class="speed-item" data-speed="1.25">1.25x</div>
-                            <div class="speed-item" data-speed="1.5">1.5x</div>
-                            <div class="speed-item" data-speed="2">2x</div>
-                        </div>
+                    <button class="control-btn" id="speed_btn">
+                        <i data-lucide="gauge"></i>
+                    </button>
+                    <div class="speed-menu" id="speed_menu">
+                        <div class="speed-item" data-speed="0.5"><span>0.5x</span></div>
+                        <div class="speed-item" data-speed="0.75"><span>0.75x</span></div>
+                        <div class="speed-item selected" data-speed="1"><span>Normal</span></div>
+                        <div class="speed-item" data-speed="1.25"><span>1.25x</span></div>
+                        <div class="speed-item" data-speed="1.5"><span>1.5x</span></div>
+                        <div class="speed-item" data-speed="2"><span>2x</span></div>
                     </div>
                     <button class="control-btn" id="fullscreen_btn">
                         <i data-lucide="maximize"></i>
@@ -320,9 +389,7 @@
 
     <script>
         function refreshIcons() {
-            if (window.lucide) {
-                window.lucide.createIcons();
-            }
+            if (window.lucide) window.lucide.createIcons();
         }
 
         window.onload = function() {
@@ -340,71 +407,233 @@
             const speedMenu = document.getElementById('speed_menu');
             const speedItems = document.querySelectorAll('.speed-item');
             const fullscreenBtn = document.getElementById('fullscreen_btn');
+            const rippleLeft = document.getElementById('ripple_left');
+            const rippleRight = document.getElementById('ripple_right');
+            const speedBadge = document.getElementById('speed_badge');
 
-            let isPlayPromisePending = false;
+            let hideControlsTimeout;
+            let isTouchDevice = false;
+            let isDragging = false;
+            let holdTimeout;
+            let originalSpeed = 1;
 
             refreshIcons();
 
             function formatTime(time) {
-                if (isNaN(time) || time === Infinity) return "0:00";
-                let minutes = Math.floor(time / 60);
-                let seconds = Math.floor(time % 60);
-                return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+                if (isNaN(time) || time === Infinity || time < 0) return "0:00";
+                let min = Math.floor(time / 60);
+                let sec = Math.floor(time % 60);
+                return `${min}:${sec < 10 ? '0' + sec : sec}`;
             }
 
             function updateDurationDisplay() {
-                if (video.duration && video.duration !== Infinity) {
+                if (video.duration && video.duration !== Infinity && !isNaN(video.duration)) {
                     durationEl.innerText = formatTime(video.duration);
                 }
             }
 
-            video.addEventListener('loadedmetadata', updateDurationDisplay);
-            video.addEventListener('canplay', updateDurationDisplay);
-
-            if (video.readyState >= 1) {
-                updateDurationDisplay();
+            function showControls() {
+                container.classList.add('show-controls');
+                clearTimeout(hideControlsTimeout);
+                if (!video.paused && !video.ended && !speedMenu.classList.contains('active') && !isDragging) {
+                    hideControlsTimeout = setTimeout(hideControls, 3000);
+                }
             }
 
+            function hideControls() {
+                if (isDragging) return;
+                container.classList.remove('show-controls');
+                clearTimeout(hideControlsTimeout);
+                speedMenu.classList.remove('active');
+            }
+
+            function showRipple(element) {
+                element.classList.remove('active');
+                void element.offsetWidth;
+                element.classList.add('active');
+            }
+
+            const startSpeedBoost = (e) => {
+                if (video.paused || video.ended) return;
+                
+                holdTimeout = setTimeout(() => {
+                    originalSpeed = video.playbackRate;
+                    video.playbackRate = 2.0;
+                    speedBadge.classList.add('active');
+                    container.classList.remove('show-controls');
+                }, 400);
+            };
+
+            const endSpeedBoost = () => {
+                clearTimeout(holdTimeout);
+                if (speedBadge.classList.contains('active')) {
+                    video.playbackRate = originalSpeed;
+                    speedBadge.classList.remove('active');
+                    showControls();
+                }
+            };
+
+            container.addEventListener('mousedown', startSpeedBoost);
+            window.addEventListener('mouseup', endSpeedBoost);
+            container.addEventListener('touchstart', (e) => {
+                isTouchDevice = true;
+                startSpeedBoost(e);
+            }, {passive: true});
+            container.addEventListener('touchend', endSpeedBoost);
+
+            container.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                
+                const isAtEnd = video.currentTime >= (video.duration - 0.2);
+                
+                if (x < rect.width / 2) {
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    showRipple(rippleLeft);
+                } else {
+                    if (video.duration && !isAtEnd) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                        showRipple(rippleRight);
+                    } else {
+                        return;
+                    }
+                }
+                
+                if (video.currentTime < (video.duration - 0.5)) {
+                    container.classList.remove('ended');
+                    updatePlayIcon(video.paused ? 'play' : 'pause');
+                }
+                showControls();
+            });
+
+            container.addEventListener('mousemove', () => {
+                if (!isTouchDevice) showControls();
+            });
+
+            container.addEventListener('click', (e) => {
+                if (e.target === container || e.target === video) {
+                    if (container.classList.contains('show-controls')) hideControls();
+                    else showControls();
+                }
+            });
+
+            function checkAndSetEndState() {
+                if (!video.duration || isDragging) return;
+                
+                const isVeryNearEnd = video.currentTime >= video.duration - 0.2;
+                
+                if (isVeryNearEnd) {
+                    container.classList.remove('playing');
+                    container.classList.add('ended');
+                    updatePlayIcon('rotate-ccw');
+                    showControls();
+                    endSpeedBoost();
+                } else {
+                    container.classList.remove('ended');
+                    updatePlayIcon(video.paused ? 'play' : 'pause');
+                }
+            }
+
+            video.addEventListener('loadedmetadata', updateDurationDisplay);
+            video.addEventListener('durationchange', updateDurationDisplay);
+            video.addEventListener('timeupdate', () => {
+                if (video.duration && !isDragging) {
+                    if (durationEl.innerText === "..." || durationEl.innerText === "0:00") {
+                        updateDurationDisplay();
+                    }
+                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                    checkAndSetEndState();
+                }
+                currentTimeEl.innerText = formatTime(video.currentTime);
+            });
+
             video.addEventListener('ended', () => {
-                container.classList.remove('playing');
-                container.classList.add('ended');
-                updatePlayIcon('rotate-ccw');
+                checkAndSetEndState();
             });
 
             async function togglePlay() {
-                if (video.ended) {
+                if (container.classList.contains('ended')) {
                     video.currentTime = 0;
                     container.classList.remove('ended');
                 }
 
                 if (video.paused) {
                     try {
-                        isPlayPromisePending = true;
-                        const playPromise = video.play();
-                        if (playPromise !== undefined) {
-                            await playPromise;
-                            isPlayPromisePending = false;
-                            container.classList.add('playing');
-                            container.classList.remove('ended');
-                            updatePlayIcon('pause');
-                        }
-                    } catch (error) {
-                        isPlayPromisePending = false;
-                    }
+                        await video.play();
+                        container.classList.add('playing');
+                        updatePlayIcon('pause');
+                        showControls();
+                    } catch (e) { console.error(e); }
                 } else {
-                    if (!isPlayPromisePending) {
-                        video.pause();
-                        container.classList.remove('playing');
-                        updatePlayIcon('play');
+                    video.pause();
+                    container.classList.remove('playing');
+                    updatePlayIcon('play');
+                    showControls();
+                }
+            }
+
+            function updatePlayIcon(name) {
+                playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
+                overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`;
+                refreshIcons();
+            }
+
+            function updateProgress(clientX) {
+                const rect = progressArea.getBoundingClientRect();
+                let pos = (clientX - rect.left) / rect.width;
+                pos = Math.max(0, Math.min(1, pos));
+                
+                if (video.duration && video.duration !== Infinity) {
+                    video.currentTime = pos * video.duration;
+                    progressBar.style.width = `${pos * 100}%`;
+                    currentTimeEl.innerText = formatTime(video.currentTime);
+                    
+                    if (pos < 0.98) {
+                        container.classList.remove('ended');
+                        updatePlayIcon(video.paused ? 'play' : 'pause');
                     }
                 }
             }
 
-            function updatePlayIcon(iconName) {
-                playPauseBtn.innerHTML = `<i data-lucide="${iconName}"></i>`;
-                overlayBtn.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px; color: white;"></i>`;
-                refreshIcons();
+            function startDragging(e) {
+                isDragging = true;
+                progressArea.classList.add('dragging');
+                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                updateProgress(clientX);
+                showControls();
             }
+
+            function onDragging(e) {
+                if (!isDragging) return;
+                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                updateProgress(clientX);
+            }
+
+            function stopDragging() {
+                if (isDragging) {
+                    isDragging = false;
+                    progressArea.classList.remove('dragging');
+                    checkAndSetEndState();
+                    showControls();
+                }
+            }
+
+            progressArea.addEventListener('mousedown', startDragging);
+            window.addEventListener('mousemove', onDragging);
+            window.addEventListener('mouseup', stopDragging);
+
+            progressArea.addEventListener('touchstart', startDragging, { passive: false });
+            window.addEventListener('touchmove', (e) => {
+                if(isDragging) {
+                    e.preventDefault();
+                    onDragging(e);
+                }
+            }, { passive: false });
+            window.addEventListener('touchend', stopDragging);
+
+            playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
+            overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
 
             speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -412,45 +641,14 @@
             });
 
             speedItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const speed = parseFloat(item.dataset.speed);
-                    video.playbackRate = speed;
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    video.playbackRate = parseFloat(item.dataset.speed);
+                    originalSpeed = video.playbackRate;
                     speedItems.forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
                     speedMenu.classList.remove('active');
                 });
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!speedMenu.contains(e.target) && e.target !== speedBtn) {
-                    speedMenu.classList.remove('active');
-                }
-            });
-
-            playPauseBtn.addEventListener('click', togglePlay);
-            overlayBtn.addEventListener('click', togglePlay);
-            
-            video.addEventListener('click', (e) => {
-                if(!speedMenu.classList.contains('active')) togglePlay();
-            });
-
-            video.addEventListener('timeupdate', (e) => {
-                const { currentTime, duration } = e.target;
-                if (duration) {
-                    progressBar.style.width = `${(currentTime / duration) * 100}%`;
-                    if(durationEl.innerText === "0:00") updateDurationDisplay();
-                }
-                currentTimeEl.innerText = formatTime(currentTime);
-            });
-
-            progressArea.addEventListener('click', (e) => {
-                const rect = progressArea.getBoundingClientRect();
-                const pos = (e.pageX - rect.left) / rect.width;
-                video.currentTime = pos * video.duration;
-                if (container.classList.contains('ended')) {
-                    container.classList.remove('ended');
-                    updatePlayIcon(video.paused ? 'play' : 'pause');
-                }
             });
 
             volumeSlider.addEventListener('input', (e) => {
@@ -459,35 +657,26 @@
                 refreshIcons();
             });
 
-            muteBtn.addEventListener('click', () => {
-                if (video.volume > 0) {
-                    video.volume = 0;
-                    volumeSlider.value = 0;
-                } else {
-                    video.volume = 1;
-                    volumeSlider.value = 1;
-                }
+            muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                video.volume = video.volume > 0 ? 0 : 1;
+                volumeSlider.value = video.volume;
                 muteBtn.innerHTML = `<i data-lucide="${video.volume == 0 ? 'volume-x' : 'volume-2'}"></i>`;
                 refreshIcons();
             });
 
-            fullscreenBtn.addEventListener('click', () => {
-                if (!document.fullscreenElement) {
-                    container.requestFullscreen();
-                    fullscreenBtn.innerHTML = `<i data-lucide="minimize"></i>`;
-                } else {
-                    document.exitFullscreen();
-                    fullscreenBtn.innerHTML = `<i data-lucide="maximize"></i>`;
-                }
-                refreshIcons();
+            fullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!document.fullscreenElement) container.requestFullscreen().catch(() => {});
+                else document.exitFullscreen();
             });
 
             document.addEventListener('keydown', (e) => {
-                if (e.code === "Space") {
-                    e.preventDefault();
-                    togglePlay();
-                }
+                if (e.code === "Space") { e.preventDefault(); togglePlay(); }
             });
+
+            setTimeout(updateDurationDisplay, 1000);
+            showControls();
         };
     </script>
 </body>
