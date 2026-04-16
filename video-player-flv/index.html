@@ -46,6 +46,8 @@
             user-select: none;
             cursor: pointer;
             touch-action: manipulation;
+            /* Sağ tık menüsünü engellemek için ek stil */
+            -webkit-touch-callout: none;
         }
 
         video {
@@ -321,7 +323,7 @@
         }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
     <div class="video-container show-controls" id="video_player">
         <video id="main_video" playsinline preload="auto">
@@ -419,6 +421,8 @@
 
             refreshIcons();
 
+            container.addEventListener('contextmenu', e => e.preventDefault());
+
             function formatTime(time) {
                 if (isNaN(time) || time === Infinity || time < 0) return "0:00";
                 let min = Math.floor(time / 60);
@@ -461,7 +465,7 @@
                     video.playbackRate = 2.0;
                     speedBadge.classList.add('active');
                     container.classList.remove('show-controls');
-                }, 400);
+                }, 400); 
             };
 
             const endSpeedBoost = () => {
@@ -475,12 +479,15 @@
 
             container.addEventListener('mousedown', startSpeedBoost);
             window.addEventListener('mouseup', endSpeedBoost);
+            
             container.addEventListener('touchstart', (e) => {
                 isTouchDevice = true;
                 startSpeedBoost(e);
             }, {passive: true});
+            
             container.addEventListener('touchend', endSpeedBoost);
-
+            container.addEventListener('touchcancel', endSpeedBoost);
+            
             container.addEventListener('dblclick', (e) => {
                 e.preventDefault();
                 const rect = container.getBoundingClientRect();
@@ -644,7 +651,7 @@
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
                     video.playbackRate = parseFloat(item.dataset.speed);
-                    originalSpeed = video.playbackRate;
+                    originalSpeed = video.playbackRate; 
                     speedItems.forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
                     speedMenu.classList.remove('active');
