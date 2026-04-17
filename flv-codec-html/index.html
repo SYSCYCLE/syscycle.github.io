@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLV Canvas Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flv.js/1.6.2/flv.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+        #video-container { display: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-3xl w-full bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700">
+        <h1 class="text-2xl font-bold mb-4 text-center text-blue-400">FLV to Canvas Oynatıcı</h1>
+        
+        <div class="relative group mb-6">
+            <canvas id="videoCanvas" class="w-full bg-black rounded-lg shadow-lg border border-slate-600"></canvas>
+            
+            <div id="status" class="absolute top-2 left-2 bg-black/60 px-3 py-1 rounded text-xs">
+                Hazır
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 justify-center">
+            <input type="file" id="fileInput" accept=".flv" class="block w-full text-sm text-slate-400
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-500 file:text-white
+                hover:file:bg-blue-600 cursor-pointer">
+            
+            <button id="playBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full font-medium transition disabled:opacity-50">
+                Oynat
+            </button>
+        </div>
+
+        <div class="mt-6 text-sm text-slate-400 bg-slate-900/50 p-4 rounded">
+            <p><strong>Nasıl Çalışır?</strong></p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+                <li><code>flv.js</code> kütüphanesi FLV dosyasını ayrıştırır.</li>
+                <li>Veri, arka planda gizli bir <code>&lt;video&gt;</code> elementine basılır.</li>
+                <li><code>requestAnimationFrame</code> ile her kare videodan alınıp <code>&lt;canvas&gt;</code> üzerine çizilir.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="video-container">
+        <video id="videoElement"></video>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('videoElement');
+        const canvas = document.getElementById('videoCanvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('fileInput');
+        const playBtn = document.getElementById('playBtn');
+        const status = document.getElementById('status');
+        let flvPlayer = null;
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (flvPlayer) {
+                flvPlayer.destroy();
+            }
+
+            const fileUrl = URL.createObjectURL(file);
+
+            if (flvjs.isSupported()) {
+                flvPlayer = flvjs.createPlayer({
+                    type: 'flv',
+                    url: fileUrl
+                });
+                flvPlayer.attachMediaElement(videoElement);
+                flvPlayer.load();
+                status.innerText = "Dosya Yüklendi: " + file.name;
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (videoElement.paused) {
+                videoElement.play();
+                status.innerText = "Oynatılıyor...";
+                renderFrame();
+            } else {
+                videoElement.pause();
+                status.innerText = "Duraklatıldı";
+            }
+        });
+
+        function renderFrame() {
+            if (videoElement.paused || videoElement.ended) return;
+
+            if (canvas.width !== videoElement.videoWidth) {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+            }
+
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+
+            requestAnimationFrame(renderFrame);
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (flvPlayer) flvPlayer.destroy();
+        });
+    </script>
+</body>
+</html>
