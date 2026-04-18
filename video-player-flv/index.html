@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Modern HTML5 Video Player</title>
-    <!-- Lucide CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -457,9 +456,7 @@
                 element.classList.add('active');
             }
 
-            // --- 2x Hızlandırma Logic ---
             const startSpeedBoost = (e) => {
-                // EĞER sürükleme yapılıyorsa veya video duraklatılmışsa tetikleme
                 if (video.paused || video.ended || isDragging) return;
                 
                 holdTimeout = setTimeout(() => {
