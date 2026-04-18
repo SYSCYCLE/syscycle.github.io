@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Modern HTML5 Video Player</title>
+    <!-- Lucide CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -46,7 +47,6 @@
             user-select: none;
             cursor: pointer;
             touch-action: manipulation;
-            /* Sağ tık menüsünü engellemek için ek stil */
             -webkit-touch-callout: none;
         }
 
@@ -88,6 +88,7 @@
             transition: height 0.1s ease;
             display: flex;
             align-items: center;
+            touch-action: none;
         }
 
         .progress-area:hover, .progress-area.dragging {
@@ -230,7 +231,6 @@
             font-weight: 600;
         }
 
-        /* 2x Bilgi Kutusu */
         .speed-badge {
             position: absolute;
             top: 20px;
@@ -457,15 +457,19 @@
                 element.classList.add('active');
             }
 
+            // --- 2x Hızlandırma Logic ---
             const startSpeedBoost = (e) => {
-                if (video.paused || video.ended) return;
+                // EĞER sürükleme yapılıyorsa veya video duraklatılmışsa tetikleme
+                if (video.paused || video.ended || isDragging) return;
                 
                 holdTimeout = setTimeout(() => {
-                    originalSpeed = video.playbackRate;
-                    video.playbackRate = 2.0;
-                    speedBadge.classList.add('active');
-                    container.classList.remove('show-controls');
-                }, 400); 
+                    if (!isDragging) {
+                        originalSpeed = video.playbackRate;
+                        video.playbackRate = 2.0;
+                        speedBadge.classList.add('active');
+                        container.classList.remove('show-controls');
+                    }
+                }, 500);
             };
 
             const endSpeedBoost = () => {
@@ -487,124 +491,25 @@
             
             container.addEventListener('touchend', endSpeedBoost);
             container.addEventListener('touchcancel', endSpeedBoost);
-            
-            container.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                const rect = container.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                
-                const isAtEnd = video.currentTime >= (video.duration - 0.2);
-                
-                if (x < rect.width / 2) {
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    showRipple(rippleLeft);
-                } else {
-                    if (video.duration && !isAtEnd) {
-                        video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                        showRipple(rippleRight);
-                    } else {
-                        return;
-                    }
-                }
-                
-                if (video.currentTime < (video.duration - 0.5)) {
-                    container.classList.remove('ended');
-                    updatePlayIcon(video.paused ? 'play' : 'pause');
-                }
-                showControls();
-            });
-
-            container.addEventListener('mousemove', () => {
-                if (!isTouchDevice) showControls();
-            });
-
-            container.addEventListener('click', (e) => {
-                if (e.target === container || e.target === video) {
-                    if (container.classList.contains('show-controls')) hideControls();
-                    else showControls();
-                }
-            });
-
-            function checkAndSetEndState() {
-                if (!video.duration || isDragging) return;
-                
-                const isVeryNearEnd = video.currentTime >= video.duration - 0.2;
-                
-                if (isVeryNearEnd) {
-                    container.classList.remove('playing');
-                    container.classList.add('ended');
-                    updatePlayIcon('rotate-ccw');
-                    showControls();
-                    endSpeedBoost();
-                } else {
-                    container.classList.remove('ended');
-                    updatePlayIcon(video.paused ? 'play' : 'pause');
-                }
-            }
-
-            video.addEventListener('loadedmetadata', updateDurationDisplay);
-            video.addEventListener('durationchange', updateDurationDisplay);
-            video.addEventListener('timeupdate', () => {
-                if (video.duration && !isDragging) {
-                    if (durationEl.innerText === "..." || durationEl.innerText === "0:00") {
-                        updateDurationDisplay();
-                    }
-                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-                    checkAndSetEndState();
-                }
-                currentTimeEl.innerText = formatTime(video.currentTime);
-            });
-
-            video.addEventListener('ended', () => {
-                checkAndSetEndState();
-            });
-
-            async function togglePlay() {
-                if (container.classList.contains('ended')) {
-                    video.currentTime = 0;
-                    container.classList.remove('ended');
-                }
-
-                if (video.paused) {
-                    try {
-                        await video.play();
-                        container.classList.add('playing');
-                        updatePlayIcon('pause');
-                        showControls();
-                    } catch (e) { console.error(e); }
-                } else {
-                    video.pause();
-                    container.classList.remove('playing');
-                    updatePlayIcon('play');
-                    showControls();
-                }
-            }
-
-            function updatePlayIcon(name) {
-                playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
-                overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`;
-                refreshIcons();
-            }
 
             function updateProgress(clientX) {
                 const rect = progressArea.getBoundingClientRect();
                 let pos = (clientX - rect.left) / rect.width;
                 pos = Math.max(0, Math.min(1, pos));
                 
-                if (video.duration && video.duration !== Infinity) {
+                if (video.duration) {
                     video.currentTime = pos * video.duration;
                     progressBar.style.width = `${pos * 100}%`;
                     currentTimeEl.innerText = formatTime(video.currentTime);
-                    
-                    if (pos < 0.98) {
-                        container.classList.remove('ended');
-                        updatePlayIcon(video.paused ? 'play' : 'pause');
-                    }
                 }
             }
 
             function startDragging(e) {
+                e.stopPropagation();
+                
                 isDragging = true;
+                clearTimeout(holdTimeout);
+                
                 progressArea.classList.add('dragging');
                 const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
                 updateProgress(clientX);
@@ -621,27 +526,79 @@
                 if (isDragging) {
                     isDragging = false;
                     progressArea.classList.remove('dragging');
-                    checkAndSetEndState();
                     showControls();
                 }
             }
 
             progressArea.addEventListener('mousedown', startDragging);
-            window.addEventListener('mousemove', onDragging);
-            window.addEventListener('mouseup', stopDragging);
-
             progressArea.addEventListener('touchstart', startDragging, { passive: false });
+            
+            window.addEventListener('mousemove', onDragging);
             window.addEventListener('touchmove', (e) => {
                 if(isDragging) {
                     e.preventDefault();
                     onDragging(e);
                 }
             }, { passive: false });
+            
+            window.addEventListener('mouseup', stopDragging);
             window.addEventListener('touchend', stopDragging);
+
+            container.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                if (x < rect.width / 2) {
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    showRipple(rippleLeft);
+                } else {
+                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                    showRipple(rippleRight);
+                }
+                showControls();
+            });
+
+            container.addEventListener('mousemove', () => {
+                if (!isTouchDevice) showControls();
+            });
+
+            container.addEventListener('click', (e) => {
+                if (e.target === container || e.target === video) {
+                    if (container.classList.contains('show-controls')) hideControls();
+                    else showControls();
+                }
+            });
+
+            video.addEventListener('loadedmetadata', updateDurationDisplay);
+            video.addEventListener('timeupdate', () => {
+                if (video.duration && !isDragging) {
+                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                }
+                currentTimeEl.innerText = formatTime(video.currentTime);
+            });
+
+            async function togglePlay() {
+                if (video.paused) {
+                    await video.play();
+                    container.classList.add('playing');
+                    updatePlayIcon('pause');
+                } else {
+                    video.pause();
+                    container.classList.remove('playing');
+                    updatePlayIcon('play');
+                }
+                showControls();
+            }
+
+            function updatePlayIcon(name) {
+                playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
+                overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`;
+                refreshIcons();
+            }
 
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
-
+            
             speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 speedMenu.classList.toggle('active');
@@ -650,8 +607,9 @@
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    video.playbackRate = parseFloat(item.dataset.speed);
-                    originalSpeed = video.playbackRate; 
+                    const s = parseFloat(item.dataset.speed);
+                    video.playbackRate = s;
+                    originalSpeed = s;
                     speedItems.forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
                     speedMenu.classList.remove('active');
@@ -674,7 +632,7 @@
 
             fullscreenBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (!document.fullscreenElement) container.requestFullscreen().catch(() => {});
+                if (!document.fullscreenElement) container.requestFullscreen();
                 else document.exitFullscreen();
             });
 
@@ -682,7 +640,6 @@
                 if (e.code === "Space") { e.preventDefault(); togglePlay(); }
             });
 
-            setTimeout(updateDurationDisplay, 1000);
             showControls();
         };
     </script>
