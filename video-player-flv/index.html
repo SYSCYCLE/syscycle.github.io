@@ -655,6 +655,11 @@
                 speedMenu.classList.toggle('active');
             });
 
+            speedBtn.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                endSpeedBoost();
+            }, { passive:true });
+
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
