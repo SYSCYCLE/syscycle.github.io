@@ -87,7 +87,6 @@
             transition: height 0.1s ease;
             display: flex;
             align-items: center;
-            touch-action: none;
         }
 
         .progress-area:hover, .progress-area.dragging {
@@ -457,16 +456,14 @@
             }
 
             const startSpeedBoost = (e) => {
-                if (video.paused || video.ended || isDragging) return;
+                if (video.paused || video.ended || isDragging || e.target.closest('#progress_area')) return;
                 
                 holdTimeout = setTimeout(() => {
-                    if (!isDragging) {
-                        originalSpeed = video.playbackRate;
-                        video.playbackRate = 2.0;
-                        speedBadge.classList.add('active');
-                        container.classList.remove('show-controls');
-                    }
-                }, 500);
+                    originalSpeed = video.playbackRate;
+                    video.playbackRate = 2.0;
+                    speedBadge.classList.add('active');
+                    container.classList.remove('show-controls');
+                }, 400); 
             };
 
             const endSpeedBoost = () => {
@@ -488,25 +485,127 @@
             
             container.addEventListener('touchend', endSpeedBoost);
             container.addEventListener('touchcancel', endSpeedBoost);
+            
+            container.addEventListener('dblclick', (e) => {
+                if(e.target.closest('#progress_area')) return;
+                
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                
+                const isAtEnd = video.currentTime >= (video.duration - 0.2);
+                
+                if (x < rect.width / 2) {
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    showRipple(rippleLeft);
+                } else {
+                    if (video.duration && !isAtEnd) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                        showRipple(rippleRight);
+                    } else {
+                        return;
+                    }
+                }
+                
+                if (video.currentTime < (video.duration - 0.5)) {
+                    container.classList.remove('ended');
+                    updatePlayIcon(video.paused ? 'play' : 'pause');
+                }
+                showControls();
+            });
+
+            container.addEventListener('mousemove', () => {
+                if (!isTouchDevice) showControls();
+            });
+
+            container.addEventListener('click', (e) => {
+                if (e.target === container || e.target === video) {
+                    if (container.classList.contains('show-controls')) hideControls();
+                    else showControls();
+                }
+            });
+
+            function checkAndSetEndState() {
+                if (!video.duration || isDragging) return;
+                
+                const isVeryNearEnd = video.currentTime >= video.duration - 0.2;
+                
+                if (isVeryNearEnd) {
+                    container.classList.remove('playing');
+                    container.classList.add('ended');
+                    updatePlayIcon('rotate-ccw');
+                    showControls();
+                    endSpeedBoost();
+                } else {
+                    container.classList.remove('ended');
+                    updatePlayIcon(video.paused ? 'play' : 'pause');
+                }
+            }
+
+            video.addEventListener('loadedmetadata', updateDurationDisplay);
+            video.addEventListener('durationchange', updateDurationDisplay);
+            video.addEventListener('timeupdate', () => {
+                if (video.duration && !isDragging) {
+                    if (durationEl.innerText === "..." || durationEl.innerText === "0:00") {
+                        updateDurationDisplay();
+                    }
+                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                    checkAndSetEndState();
+                }
+                currentTimeEl.innerText = formatTime(video.currentTime);
+            });
+
+            video.addEventListener('ended', () => {
+                checkAndSetEndState();
+            });
+
+            async function togglePlay() {
+                if (container.classList.contains('ended')) {
+                    video.currentTime = 0;
+                    container.classList.remove('ended');
+                }
+
+                if (video.paused) {
+                    try {
+                        await video.play();
+                        container.classList.add('playing');
+                        updatePlayIcon('pause');
+                        showControls();
+                    } catch (e) { console.error(e); }
+                } else {
+                    video.pause();
+                    container.classList.remove('playing');
+                    updatePlayIcon('play');
+                    showControls();
+                }
+            }
+
+            function updatePlayIcon(name) {
+                playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
+                overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`;
+                refreshIcons();
+            }
 
             function updateProgress(clientX) {
                 const rect = progressArea.getBoundingClientRect();
                 let pos = (clientX - rect.left) / rect.width;
                 pos = Math.max(0, Math.min(1, pos));
                 
-                if (video.duration) {
+                if (video.duration && video.duration !== Infinity) {
                     video.currentTime = pos * video.duration;
                     progressBar.style.width = `${pos * 100}%`;
                     currentTimeEl.innerText = formatTime(video.currentTime);
+                    
+                    if (pos < 0.98) {
+                        container.classList.remove('ended');
+                        updatePlayIcon(video.paused ? 'play' : 'pause');
+                    }
                 }
             }
 
             function startDragging(e) {
-                e.stopPropagation();
-                
                 isDragging = true;
                 clearTimeout(holdTimeout);
-                
                 progressArea.classList.add('dragging');
                 const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
                 updateProgress(clientX);
@@ -523,79 +622,27 @@
                 if (isDragging) {
                     isDragging = false;
                     progressArea.classList.remove('dragging');
+                    checkAndSetEndState();
                     showControls();
                 }
             }
 
             progressArea.addEventListener('mousedown', startDragging);
-            progressArea.addEventListener('touchstart', startDragging, { passive: false });
-            
             window.addEventListener('mousemove', onDragging);
+            window.addEventListener('mouseup', stopDragging);
+
+            progressArea.addEventListener('touchstart', startDragging, { passive: false });
             window.addEventListener('touchmove', (e) => {
                 if(isDragging) {
                     e.preventDefault();
                     onDragging(e);
                 }
             }, { passive: false });
-            
-            window.addEventListener('mouseup', stopDragging);
             window.addEventListener('touchend', stopDragging);
-
-            container.addEventListener('dblclick', (e) => {
-                e.preventDefault();
-                const rect = container.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                if (x < rect.width / 2) {
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    showRipple(rippleLeft);
-                } else {
-                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                    showRipple(rippleRight);
-                }
-                showControls();
-            });
-
-            container.addEventListener('mousemove', () => {
-                if (!isTouchDevice) showControls();
-            });
-
-            container.addEventListener('click', (e) => {
-                if (e.target === container || e.target === video) {
-                    if (container.classList.contains('show-controls')) hideControls();
-                    else showControls();
-                }
-            });
-
-            video.addEventListener('loadedmetadata', updateDurationDisplay);
-            video.addEventListener('timeupdate', () => {
-                if (video.duration && !isDragging) {
-                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-                }
-                currentTimeEl.innerText = formatTime(video.currentTime);
-            });
-
-            async function togglePlay() {
-                if (video.paused) {
-                    await video.play();
-                    container.classList.add('playing');
-                    updatePlayIcon('pause');
-                } else {
-                    video.pause();
-                    container.classList.remove('playing');
-                    updatePlayIcon('play');
-                }
-                showControls();
-            }
-
-            function updatePlayIcon(name) {
-                playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
-                overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`;
-                refreshIcons();
-            }
 
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
-            
+
             speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 speedMenu.classList.toggle('active');
@@ -604,9 +651,8 @@
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const s = parseFloat(item.dataset.speed);
-                    video.playbackRate = s;
-                    originalSpeed = s;
+                    video.playbackRate = parseFloat(item.dataset.speed);
+                    originalSpeed = video.playbackRate; 
                     speedItems.forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
                     speedMenu.classList.remove('active');
@@ -629,7 +675,7 @@
 
             fullscreenBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (!document.fullscreenElement) container.requestFullscreen();
+                if (!document.fullscreenElement) container.requestFullscreen().catch(() => {});
                 else document.exitFullscreen();
             });
 
@@ -637,6 +683,7 @@
                 if (e.code === "Space") { e.preventDefault(); togglePlay(); }
             });
 
+            setTimeout(updateDurationDisplay, 1000);
             showControls();
         };
     </script>
