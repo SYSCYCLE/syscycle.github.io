@@ -456,6 +456,11 @@
             }
 
             const startSpeedBoost = (e) => {
+                if (e.touches && e.touches.length !== 1) {
+                    endSpeedBoost();
+                    return;
+                }
+                
                 if (video.paused || video.ended || isDragging || e.target.closest('#progress_area')) return;
                 
                 holdTimeout = setTimeout(() => {
@@ -480,11 +485,15 @@
             
             container.addEventListener('touchstart', (e) => {
                 isTouchDevice = true;
-                startSpeedBoost(e);
+                if (e.touches.length === 1) {
+                    startSpeedBoost(e);
+                } else {
+                    endSpeedBoost();
+                }
             }, {passive: true});
             
-            container.addEventListener('touchend', endSpeedBoost);
-            container.addEventListener('touchcancel', endSpeedBoost);
+            window.addEventListener('touchend', endSpeedBoost);
+            window.addEventListener('touchcancel', endSpeedBoost);
             
             container.addEventListener('dblclick', (e) => {
                 if(e.target.closest('#progress_area')) return;
@@ -492,7 +501,6 @@
                 e.preventDefault();
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
-                
                 const isAtEnd = video.currentTime >= (video.duration - 0.2);
                 
                 if (x < rect.width / 2) {
@@ -502,8 +510,6 @@
                     if (video.duration && !isAtEnd) {
                         video.currentTime = Math.min(video.duration, video.currentTime + 10);
                         showRipple(rippleRight);
-                    } else {
-                        return;
                     }
                 }
                 
