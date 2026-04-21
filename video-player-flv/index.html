@@ -456,12 +456,16 @@
             }
 
             const startSpeedBoost = (e) => {
+                clearTimeout(holdTimeout);
+
+                if (e.target.closest('.control-btn, .speed-menu, #speed_menu, #progress_area')) return;
+
                 if (e.touches && e.touches.length !== 1) {
                     endSpeedBoost();
                     return;
                 }
                 
-                if (video.paused || video.ended || isDragging || e.target.closest('#progress_area')) return;
+                if (video.paused || video.ended || isDragging) return;
                 
                 holdTimeout = setTimeout(() => {
                     originalSpeed = video.playbackRate;
@@ -473,14 +477,16 @@
 
             const endSpeedBoost = () => {
                 clearTimeout(holdTimeout);
-                if (speedBadge.classList.contains('active')) {
+                if (video.playbackRate === 2.0 && originalSpeed !== undefined) {
                     video.playbackRate = originalSpeed;
-                    speedBadge.classList.remove('active');
-                    showControls();
                 }
+                speedBadge.classList.remove('active');
+                showControls();
             };
 
-            container.addEventListener('mousedown', startSpeedBoost);
+            container.addEventListener('mousedown', (e) => {
+                if (!isTouchDevice) startSpeedBoost(e);
+            });
             window.addEventListener('mouseup', endSpeedBoost);
             
             container.addEventListener('touchstart', (e) => {
