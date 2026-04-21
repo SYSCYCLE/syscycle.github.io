@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modern HTML5 Video Player</title>
+    <title>Modern FLV Video Player</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -30,6 +30,8 @@
             min-height: 100vh;
             color: var(--text-color);
             overflow: hidden;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .video-container {
@@ -43,17 +45,19 @@
             aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
+            justify-content: center;
             user-select: none;
             cursor: pointer;
             touch-action: manipulation;
             -webkit-touch-callout: none;
         }
 
-        video {
+        canvas {
             width: 100%;
             height: 100%;
             display: block;
             pointer-events: none;
+            object-fit: contain;
         }
 
         .video-controls {
@@ -148,6 +152,11 @@
 
         .control-btn:hover {
             color: var(--primary-color);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .time-display {
@@ -271,7 +280,8 @@
         }
 
         .video-container.show-controls:not(.playing) .overlay-play,
-        .video-container.ended .overlay-play {
+        .video-container.ended .overlay-play,
+        .video-container.no-file .overlay-play {
             opacity: 0.95;
             visibility: visible;
             pointer-events: auto;
@@ -312,6 +322,53 @@
             100% { opacity: 0; transform: scale(1.2); }
         }
 
+        .file-input-wrapper {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 25;
+            display: flex;
+            gap: 10px;
+        }
+
+        .file-btn {
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+
+        .file-btn:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .status-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 16px;
+            pointer-events: none;
+            z-index: 2;
+            text-align: center;
+        }
+
         svg {
             stroke: currentColor;
             stroke-width: 2;
@@ -323,10 +380,18 @@
 </head>
 <body oncontextmenu="return false;">
 
-    <div class="video-container show-controls" id="video_player">
-        <video id="main_video" playsinline preload="auto">
-            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-        </video>
+    <div class="video-container show-controls no-file" id="video_player">
+        <canvas id="main_canvas"></canvas>
+        
+        <div class="status-text" id="status_text">FLV dosyası seçmek için tıklayın</div>
+
+        <div class="file-input-wrapper">
+            <button class="file-btn" id="file_btn">
+                <i data-lucide="folder-open" style="width: 16px; height: 16px;"></i>
+                <span>Dosya Seç</span>
+            </button>
+            <input type="file" id="fileInput" accept=".flv">
+        </div>
 
         <div class="speed-badge" id="speed_badge">
             <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
@@ -353,22 +418,22 @@
 
             <div class="controls-main">
                 <div class="controls-left">
-                    <button class="control-btn" id="play_pause">
+                    <button class="control-btn" id="play_pause" disabled>
                         <i data-lucide="play"></i>
                     </button>
                     <div class="volume-container">
-                        <button class="control-btn" id="mute_btn">
+                        <button class="control-btn" id="mute_btn" disabled>
                             <i data-lucide="volume-2"></i>
                         </button>
                         <input type="range" class="volume-slider" id="volume_slider" min="0" max="1" step="0.1" value="1">
                     </div>
                     <div class="time-display">
-                        <span id="current_time">0:00</span> / <span id="duration">...</span>
+                        <span id="current_time">0:00</span> / <span id="duration">0:00</span>
                     </div>
                 </div>
 
                 <div class="controls-right">
-                    <button class="control-btn" id="speed_btn">
+                    <button class="control-btn" id="speed_btn" disabled>
                         <i data-lucide="gauge"></i>
                     </button>
                     <div class="speed-menu" id="speed_menu">
@@ -392,9 +457,324 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
+        class FLVPlayer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.audioCtx = null;
+                this.videoDecoder = null;
+                this.audioBuffer = null;
+                this.audioSource = null;
+                this.gainNode = null;
+                
+                this.videoFrames = [];
+                this.lastDrawnFrame = null;
+                this.duration = 0;
+                this.isPlaying = false;
+                this.isReady = false;
+                this.playbackSpeed = 1;
+                this.volume = 1;
+                
+                this.startTime = 0;
+                this.pauseTime = 0;
+                this.seekOffset = 0;
+                this.rafId = null;
+                
+                this.onTimeUpdate = null;
+                this.onEnded = null;
+                this.onReady = null;
+            }
+
+            async loadFile(file) {
+                this.reset();
+                const buffer = await file.arrayBuffer();
+                await this.processFLV(buffer);
+            }
+
+            reset() {
+                this.pause();
+                if (this.videoDecoder) {
+                    try { this.videoDecoder.close(); } catch(e) {}
+                }
+                if (this.audioSource) {
+                    try { this.audioSource.stop(); } catch(e) {}
+                }
+                this.videoFrames.forEach(f => {
+                    try { f.close(); } catch(e) {}
+                });
+                this.videoFrames = [];
+                this.lastDrawnFrame = null;
+                this.isReady = false;
+                this.duration = 0;
+                this.seekOffset = 0;
+                this.pauseTime = 0;
+            }
+
+            async processFLV(buffer) {
+                const view = new DataView(buffer);
+                let offset = 13;
+                const mp3Chunks = [];
+                const videoChunks = [];
+                let maxTimestamp = 0;
+
+                while (offset < buffer.byteLength) {
+                    if (offset + 11 > buffer.byteLength) break;
+                    const tagType = view.getUint8(offset);
+                    const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
+                    const timestamp = (view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24);
+                    const dOffset = offset + 11;
+
+                    if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) {
+                        const aInfo = view.getUint8(dOffset);
+                        if (((aInfo & 0xF0) >> 4) === 2) {
+                            mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize));
+                        }
+                    } else if (tagType === 0x09 && dOffset + 5 < buffer.byteLength) {
+                        const vInfo = view.getUint8(dOffset);
+                        const pType = view.getUint8(dOffset + 1);
+                        if ((vInfo & 0x0F) === 7) {
+                            const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
+                            const isKeyframe = (vInfo >> 4) === 1;
+                            videoChunks.push({
+                                type: isKeyframe ? 'key' : 'delta',
+                                timestamp: timestamp * 1000,
+                                data: payload,
+                                pType
+                            });
+                            if (timestamp > maxTimestamp) maxTimestamp = timestamp;
+                        }
+                    }
+                    offset += 11 + dataSize + 4;
+                }
+
+                this.duration = maxTimestamp / 1000;
+
+                if (mp3Chunks.length > 0) {
+                    const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
+                    const audioArrayBuffer = await fullAudioBlob.arrayBuffer();
+                    if (!this.audioCtx) {
+                        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
+                }
+
+                await this.decodeVideo(videoChunks);
+
+                this.isReady = true;
+                if (this.onReady) this.onReady(this.duration);
+            }
+
+            async decodeVideo(chunks) {
+                return new Promise((resolve, reject) => {
+                    let config = null;
+                    let pendingConfigs = [];
+                    let decodedCount = 0;
+                    
+                    this.videoDecoder = new VideoDecoder({
+                        output: (frame) => {
+                            this.videoFrames.push(frame);
+                        },
+                        error: (e) => {
+                            console.error('VideoDecoder error:', e);
+                        }
+                    });
+
+                    for (const chunk of chunks) {
+                        if (chunk.pType === 0) {
+                            config = { codec: 'avc1.42E01E', description: chunk.data };
+                            break;
+                        }
+                    }
+
+                    if (!config) {
+                        reject(new Error('No AVCDecoderConfiguration found'));
+                        return;
+                    }
+
+                    this.videoDecoder.configure(config);
+
+                    for (const chunk of chunks) {
+                        if (chunk.pType === 0) continue;
+                        this.videoDecoder.decode(new EncodedVideoChunk({
+                            type: chunk.type,
+                            timestamp: chunk.timestamp,
+                            data: chunk.data
+                        }));
+                    }
+
+                    this.videoDecoder.flush().then(() => {
+                        this.videoFrames.sort((a, b) => a.timestamp - b.timestamp);
+                        resolve();
+                    }).catch(reject);
+                });
+            }
+
+            play() {
+                if (!this.isReady || this.isPlaying) return;
+                
+                if (this.pauseTime >= this.duration - 0.1) {
+                    this.seek(0);
+                }
+
+                this.isPlaying = true;
+                this.startTime = performance.now();
+                
+                if (this.audioBuffer && this.audioCtx) {
+                    this.audioSource = this.audioCtx.createBufferSource();
+                    this.audioSource.buffer = this.audioBuffer;
+                    this.gainNode = this.audioCtx.createGain();
+                    this.gainNode.gain.value = this.volume;
+                    this.audioSource.connect(this.gainNode);
+                    this.gainNode.connect(this.audioCtx.destination);
+                    this.audioSource.playbackRate.value = this.playbackSpeed;
+                    
+                    if (this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume();
+                    }
+                    
+                    this.audioSource.start(0, this.seekOffset);
+                    this.audioSource.onended = () => {
+                        if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
+                            this.pause();
+                            if (this.onEnded) this.onEnded();
+                        }
+                    };
+                }
+
+                this.renderLoop();
+            }
+
+            pause() {
+                this.isPlaying = false;
+                if (this.rafId) cancelAnimationFrame(this.rafId);
+                
+                if (this.audioSource) {
+                    try { this.audioSource.stop(); } catch(e) {}
+                    this.audioSource = null;
+                }
+                
+                if (this.startTime > 0) {
+                    this.pauseTime = performance.now();
+                    const elapsed = (this.pauseTime - this.startTime) / 1000;
+                    this.seekOffset += elapsed * this.playbackSpeed;
+                }
+            }
+
+            seek(time) {
+                const wasPlaying = this.isPlaying;
+                this.pause();
+                this.seekOffset = Math.max(0, Math.min(time, this.duration));
+                this.pauseTime = 0;
+                
+                this.renderFrameAt(this.seekOffset);
+                
+                if (wasPlaying) this.play();
+            }
+
+            renderFrameAt(timeSec) {
+                const targetTs = timeSec * 1000000;
+                let bestFrame = null;
+                
+                for (let i = this.videoFrames.length - 1; i >= 0; i--) {
+                    if (this.videoFrames[i].timestamp <= targetTs) {
+                        bestFrame = this.videoFrames[i];
+                        break;
+                    }
+                }
+
+                if (bestFrame) {
+                    this.canvas.width = bestFrame.displayWidth;
+                    this.canvas.height = bestFrame.displayHeight;
+                    this.ctx.drawImage(bestFrame, 0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+
+            renderLoop() {
+                if (!this.isPlaying) return;
+
+                const now = performance.now();
+                const elapsed = (now - this.startTime) / 1000;
+                this.currentTime = this.seekOffset + (elapsed * this.playbackSpeed);
+
+                if (this.currentTime >= this.duration) {
+                    this.currentTime = this.duration;
+                    this.renderFrameAt(this.duration);
+                    if (this.onTimeUpdate) this.onTimeUpdate(this.currentTime, this.duration);
+                    this.pause();
+                    if (this.onEnded) this.onEnded();
+                    return;
+                }
+
+                const targetTs = this.currentTime * 1000000;
+                let bestFrame = null;
+                let bestIndex = -1;
+                
+                for (let i = this.videoFrames.length - 1; i >= 0; i--) {
+                    if (this.videoFrames[i].timestamp <= targetTs) {
+                        bestFrame = this.videoFrames[i];
+                        bestIndex = i;
+                        break;
+                    }
+                }
+
+                if (bestFrame && bestFrame !== this.lastDrawnFrame) {
+                    this.canvas.width = bestFrame.displayWidth;
+                    this.canvas.height = bestFrame.displayHeight;
+                    this.ctx.drawImage(bestFrame, 0, 0, this.canvas.width, this.canvas.height);
+                    this.lastDrawnFrame = bestFrame;
+                }
+
+                if (this.onTimeUpdate) this.onTimeUpdate(this.currentTime, this.duration);
+
+                this.rafId = requestAnimationFrame(() => this.renderLoop());
+            }
+
+            setSpeed(speed) {
+                const wasPlaying = this.isPlaying;
+                const current = this.currentTime || this.seekOffset;
+                this.playbackSpeed = speed;
+                if (wasPlaying) {
+                    this.seekOffset = current;
+                    this.startTime = performance.now();
+                    if (this.audioSource) {
+                        try { this.audioSource.stop(); } catch(e) {}
+                    }
+                    if (this.audioBuffer && this.audioCtx) {
+                        this.audioSource = this.audioCtx.createBufferSource();
+                        this.audioSource.buffer = this.audioBuffer;
+                        this.gainNode = this.audioCtx.createGain();
+                        this.gainNode.gain.value = this.volume;
+                        this.audioSource.connect(this.gainNode);
+                        this.gainNode.connect(this.audioCtx.destination);
+                        this.audioSource.playbackRate.value = speed;
+                        this.audioSource.start(0, this.seekOffset);
+                    }
+                }
+            }
+
+            setVolume(vol) {
+                this.volume = vol;
+                if (this.gainNode) {
+                    this.gainNode.gain.value = vol;
+                }
+            }
+
+            get currentTime() {
+                if (this.isPlaying) {
+                    const elapsed = (performance.now() - this.startTime) / 1000;
+                    return this.seekOffset + (elapsed * this.playbackSpeed);
+                }
+                return this.seekOffset;
+            }
+
+            set currentTime(val) {
+            }
+        }
+
         window.onload = function() {
             const container = document.getElementById('video_player');
-            const video = document.getElementById('main_video');
+            const canvas = document.getElementById('main_canvas');
+            const statusText = document.getElementById('status_text');
             const playPauseBtn = document.getElementById('play_pause');
             const overlayBtn = document.getElementById('overlay_btn');
             const progressArea = document.getElementById('progress_area');
@@ -410,14 +790,47 @@
             const rippleLeft = document.getElementById('ripple_left');
             const rippleRight = document.getElementById('ripple_right');
             const speedBadge = document.getElementById('speed_badge');
+            const fileInput = document.getElementById('fileInput');
+            const fileBtn = document.getElementById('file_btn');
 
+            const player = new FLVPlayer(canvas);
             let hideControlsTimeout;
             let isTouchDevice = false;
             let isDragging = false;
             let holdTimeout;
             let originalSpeed = 1;
+            let fileLoaded = false;
 
             refreshIcons();
+
+            fileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                statusText.textContent = "Yükleniyor...";
+                container.classList.remove('no-file');
+                
+                try {
+                    await player.loadFile(file);
+                    fileLoaded = true;
+                    statusText.style.display = 'none';
+                    
+                    playPauseBtn.disabled = false;
+                    muteBtn.disabled = false;
+                    speedBtn.disabled = false;
+                    
+                    togglePlay();
+                } catch (err) {
+                    statusText.textContent = "Hata: " + err.message;
+                    statusText.style.display = 'block';
+                    console.error(err);
+                }
+            });
 
             container.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -428,16 +841,10 @@
                 return `${min}:${sec < 10 ? '0' + sec : sec}`;
             }
 
-            function updateDurationDisplay() {
-                if (video.duration && video.duration !== Infinity && !isNaN(video.duration)) {
-                    durationEl.innerText = formatTime(video.duration);
-                }
-            }
-
             function showControls() {
                 container.classList.add('show-controls');
                 clearTimeout(hideControlsTimeout);
-                if (!video.paused && !video.ended && !speedMenu.classList.contains('active') && !isDragging) {
+                if (player.isPlaying && !speedMenu.classList.contains('active') && !isDragging) {
                     hideControlsTimeout = setTimeout(hideControls, 3000);
                 }
             }
@@ -457,17 +864,15 @@
 
             const startSpeedBoost = (e) => {
                 clearTimeout(holdTimeout);
-                
                 if (e.touches && e.touches.length !== 1) {
                     endSpeedBoost();
                     return;
                 }
-                
-                if (video.paused || video.ended || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu')) return;
+                if (!player.isReady || !player.isPlaying || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu, .file-input-wrapper')) return;
                 
                 holdTimeout = setTimeout(() => {
-                    originalSpeed = video.playbackRate;
-                    video.playbackRate = 2.0;
+                    originalSpeed = player.playbackSpeed;
+                    player.setSpeed(2.0);
                     speedBadge.classList.add('active');
                     container.classList.remove('show-controls');
                 }, 400); 
@@ -476,7 +881,7 @@
             const endSpeedBoost = () => {
                 clearTimeout(holdTimeout);
                 if (speedBadge.classList.contains('active')) {
-                    video.playbackRate = originalSpeed;
+                    player.setSpeed(originalSpeed);
                     speedBadge.classList.remove('active');
                     showControls();
                 }
@@ -489,37 +894,26 @@
             
             container.addEventListener('touchstart', (e) => {
                 isTouchDevice = true;
-                if (e.touches.length === 1) {
-                    startSpeedBoost(e);
-                } else {
-                    endSpeedBoost();
-                }
+                if (e.touches.length === 1) startSpeedBoost(e);
+                else endSpeedBoost();
             }, {passive: true});
             
             window.addEventListener('touchend', endSpeedBoost);
             window.addEventListener('touchcancel', endSpeedBoost);
-            
+
             container.addEventListener('dblclick', (e) => {
-                if(e.target.closest('#progress_area')) return;
-                
+                if (!player.isReady || e.target.closest('#progress_area, .file-input-wrapper')) return;
                 e.preventDefault();
+                
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
-                const isAtEnd = video.currentTime >= (video.duration - 0.2);
                 
                 if (x < rect.width / 2) {
-                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    player.seek(Math.max(0, player.currentTime - 10));
                     showRipple(rippleLeft);
                 } else {
-                    if (video.duration && !isAtEnd) {
-                        video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                        showRipple(rippleRight);
-                    }
-                }
-                
-                if (video.currentTime < (video.duration - 0.5)) {
-                    container.classList.remove('ended');
-                    updatePlayIcon(video.paused ? 'play' : 'pause');
+                    player.seek(Math.min(player.duration, player.currentTime + 10));
+                    showRipple(rippleRight);
                 }
                 showControls();
             });
@@ -529,66 +923,15 @@
             });
 
             container.addEventListener('click', (e) => {
-                if (e.target === container || e.target === video) {
+                if (e.target === container || e.target === canvas) {
+                    if (!fileLoaded) {
+                        fileInput.click();
+                        return;
+                    }
                     if (container.classList.contains('show-controls')) hideControls();
                     else showControls();
                 }
             });
-
-            function checkAndSetEndState() {
-                if (!video.duration || isDragging) return;
-                
-                const isVeryNearEnd = video.currentTime >= video.duration - 0.2;
-                
-                if (isVeryNearEnd) {
-                    container.classList.remove('playing');
-                    container.classList.add('ended');
-                    updatePlayIcon('rotate-ccw');
-                    showControls();
-                    endSpeedBoost();
-                } else {
-                    container.classList.remove('ended');
-                    updatePlayIcon(video.paused ? 'play' : 'pause');
-                }
-            }
-
-            video.addEventListener('loadedmetadata', updateDurationDisplay);
-            video.addEventListener('durationchange', updateDurationDisplay);
-            video.addEventListener('timeupdate', () => {
-                if (video.duration && !isDragging) {
-                    if (durationEl.innerText === "..." || durationEl.innerText === "0:00") {
-                        updateDurationDisplay();
-                    }
-                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-                    checkAndSetEndState();
-                }
-                currentTimeEl.innerText = formatTime(video.currentTime);
-            });
-
-            video.addEventListener('ended', () => {
-                checkAndSetEndState();
-            });
-
-            async function togglePlay() {
-                if (container.classList.contains('ended')) {
-                    video.currentTime = 0;
-                    container.classList.remove('ended');
-                }
-
-                if (video.paused) {
-                    try {
-                        await video.play();
-                        container.classList.add('playing');
-                        updatePlayIcon('pause');
-                        showControls();
-                    } catch (e) { console.error(e); }
-                } else {
-                    video.pause();
-                    container.classList.remove('playing');
-                    updatePlayIcon('play');
-                    showControls();
-                }
-            }
 
             function updatePlayIcon(name) {
                 playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`;
@@ -596,24 +939,39 @@
                 refreshIcons();
             }
 
-            function updateProgress(clientX) {
-                const rect = progressArea.getBoundingClientRect();
-                let pos = (clientX - rect.left) / rect.width;
-                pos = Math.max(0, Math.min(1, pos));
-                
-                if (video.duration && video.duration !== Infinity) {
-                    video.currentTime = pos * video.duration;
-                    progressBar.style.width = `${pos * 100}%`;
-                    currentTimeEl.innerText = formatTime(video.currentTime);
-                    
-                    if (pos < 0.98) {
-                        container.classList.remove('ended');
-                        updatePlayIcon(video.paused ? 'play' : 'pause');
-                    }
+            async function togglePlay() {
+                if (!player.isReady) {
+                    if (!fileLoaded) fileInput.click();
+                    return;
+                }
+
+                if (player.isPlaying) {
+                    player.pause();
+                    container.classList.remove('playing');
+                    updatePlayIcon('play');
+                    showControls();
+                } else {
+                    player.play();
+                    container.classList.add('playing');
+                    container.classList.remove('ended');
+                    updatePlayIcon('pause');
+                    showControls();
                 }
             }
 
+            function updateProgress(clientX) {
+                if (!player.isReady) return;
+                const rect = progressArea.getBoundingClientRect();
+                let pos = (clientX - rect.left) / rect.width;
+                pos = Math.max(0, Math.min(1, pos));
+                const seekTime = pos * player.duration;
+                player.seek(seekTime);
+                progressBar.style.width = `${pos * 100}%`;
+                currentTimeEl.innerText = formatTime(seekTime);
+            }
+
             function startDragging(e) {
+                if (!player.isReady) return;
                 isDragging = true;
                 clearTimeout(holdTimeout);
                 progressArea.classList.add('dragging');
@@ -632,7 +990,6 @@
                 if (isDragging) {
                     isDragging = false;
                     progressArea.classList.remove('dragging');
-                    checkAndSetEndState();
                     showControls();
                 }
             }
@@ -650,6 +1007,24 @@
             }, { passive: false });
             window.addEventListener('touchend', stopDragging);
 
+            player.onTimeUpdate = (current, duration) => {
+                progressBar.style.width = `${(current / duration) * 100}%`;
+                currentTimeEl.innerText = formatTime(current);
+                durationEl.innerText = formatTime(duration);
+            };
+
+            player.onReady = (duration) => {
+                durationEl.innerText = formatTime(duration);
+            };
+
+            player.onEnded = () => {
+                container.classList.remove('playing');
+                container.classList.add('ended');
+                updatePlayIcon('rotate-ccw');
+                showControls();
+                endSpeedBoost();
+            };
+
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
 
@@ -659,16 +1034,12 @@
                 speedMenu.classList.toggle('active');
             });
 
-            speedBtn.addEventListener('touchstart', (e) => {
-                e.stopPropagation();
-                endSpeedBoost();
-            }, { passive:true });
-
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    video.playbackRate = parseFloat(item.dataset.speed);
-                    originalSpeed = video.playbackRate; 
+                    const speed = parseFloat(item.dataset.speed);
+                    player.setSpeed(speed);
+                    originalSpeed = speed;
                     speedItems.forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
                     speedMenu.classList.remove('active');
@@ -676,16 +1047,18 @@
             });
 
             volumeSlider.addEventListener('input', (e) => {
-                video.volume = e.target.value;
-                muteBtn.innerHTML = `<i data-lucide="${video.volume == 0 ? 'volume-x' : 'volume-2'}"></i>`;
+                const vol = parseFloat(e.target.value);
+                player.setVolume(vol);
+                muteBtn.innerHTML = `<i data-lucide="${vol == 0 ? 'volume-x' : 'volume-2'}"></i>`;
                 refreshIcons();
             });
 
             muteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                video.volume = video.volume > 0 ? 0 : 1;
-                volumeSlider.value = video.volume;
-                muteBtn.innerHTML = `<i data-lucide="${video.volume == 0 ? 'volume-x' : 'volume-2'}"></i>`;
+                const newVol = player.volume > 0 ? 0 : 1;
+                player.setVolume(newVol);
+                volumeSlider.value = newVol;
+                muteBtn.innerHTML = `<i data-lucide="${newVol == 0 ? 'volume-x' : 'volume-2'}"></i>`;
                 refreshIcons();
             });
 
@@ -699,7 +1072,6 @@
                 if (e.code === "Space") { e.preventDefault(); togglePlay(); }
             });
 
-            setTimeout(updateDurationDisplay, 1000);
             showControls();
         };
     </script>
