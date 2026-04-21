@@ -457,15 +457,13 @@
 
             const startSpeedBoost = (e) => {
                 clearTimeout(holdTimeout);
-
-                if (e.target.closest('.control-btn, .speed-menu, #speed_menu, #progress_area')) return;
-
+                
                 if (e.touches && e.touches.length !== 1) {
                     endSpeedBoost();
                     return;
                 }
                 
-                if (video.paused || video.ended || isDragging) return;
+                if (video.paused || video.ended || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu')) return;
                 
                 holdTimeout = setTimeout(() => {
                     originalSpeed = video.playbackRate;
