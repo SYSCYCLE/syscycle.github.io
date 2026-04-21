@@ -475,11 +475,11 @@
 
             const endSpeedBoost = () => {
                 clearTimeout(holdTimeout);
-                if (video.playbackRate === 2.0 && originalSpeed !== undefined) {
+                if (speedBadge.classList.contains('active')) {
                     video.playbackRate = originalSpeed;
+                    speedBadge.classList.remove('active');
+                    showControls();
                 }
-                speedBadge.classList.remove('active');
-                showControls();
             };
 
             container.addEventListener('mousedown', (e) => {
