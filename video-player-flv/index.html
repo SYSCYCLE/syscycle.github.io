@@ -57,7 +57,6 @@
             height: 100%;
             display: block;
             pointer-events: none;
-            object-fit: contain;
         }
 
         .video-controls {
@@ -476,7 +475,6 @@
                 this.volume = 1;
                 
                 this.startTime = 0;
-                this.pauseTime = 0;
                 this.seekOffset = 0;
                 this.rafId = null;
                 
@@ -500,14 +498,13 @@
                     try { this.audioSource.stop(); } catch(e) {}
                 }
                 this.videoFrames.forEach(f => {
-                    try { f.close(); } catch(e) {}
+                    try { f.frame.close(); } catch(e) {}
                 });
                 this.videoFrames = [];
                 this.lastDrawnFrame = null;
                 this.isReady = false;
                 this.duration = 0;
                 this.seekOffset = 0;
-                this.pauseTime = 0;
             }
 
             async processFLV(buffer) {
@@ -558,62 +555,54 @@
                     this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
                 }
 
-                await this.decodeVideo(videoChunks);
+                this.setupVideoDecoder(videoChunks);
 
                 this.isReady = true;
                 if (this.onReady) this.onReady(this.duration);
             }
 
-            async decodeVideo(chunks) {
-                return new Promise((resolve, reject) => {
-                    let config = null;
-                    let pendingConfigs = [];
-                    let decodedCount = 0;
-                    
-                    this.videoDecoder = new VideoDecoder({
-                        output: (frame) => {
-                            this.videoFrames.push(frame);
-                        },
-                        error: (e) => {
-                            console.error('VideoDecoder error:', e);
-                        }
-                    });
-
-                    for (const chunk of chunks) {
-                        if (chunk.pType === 0) {
-                            config = { codec: 'avc1.42E01E', description: chunk.data };
-                            break;
-                        }
-                    }
-
-                    if (!config) {
-                        reject(new Error('No AVCDecoderConfiguration found'));
-                        return;
-                    }
-
-                    this.videoDecoder.configure(config);
-
-                    for (const chunk of chunks) {
-                        if (chunk.pType === 0) continue;
-                        this.videoDecoder.decode(new EncodedVideoChunk({
-                            type: chunk.type,
-                            timestamp: chunk.timestamp,
-                            data: chunk.data
-                        }));
-                    }
-
-                    this.videoDecoder.flush().then(() => {
+            setupVideoDecoder(videoChunks) {
+                this.videoDecoder = new VideoDecoder({
+                    output: (frame) => {
+                        const cloned = frame.clone();
+                        frame.close();
+                        this.videoFrames.push({ timestamp: frame.timestamp, frame: cloned });
                         this.videoFrames.sort((a, b) => a.timestamp - b.timestamp);
-                        resolve();
-                    }).catch(reject);
+                    },
+                    error: (e) => {
+                        console.error('VideoDecoder error:', e);
+                    }
                 });
+
+                let config = null;
+                for (const chunk of videoChunks) {
+                    if (chunk.pType === 0) {
+                        config = { codec: 'avc1.42E01E', description: chunk.data };
+                        break;
+                    }
+                }
+
+                if (!config) {
+                    throw new Error('No AVCDecoderConfiguration found');
+                }
+
+                this.videoDecoder.configure(config);
+
+                for (const chunk of videoChunks) {
+                    if (chunk.pType === 0) continue;
+                    this.videoDecoder.decode(new EncodedVideoChunk({
+                        type: chunk.type,
+                        timestamp: chunk.timestamp,
+                        data: chunk.data
+                    }));
+                }
             }
 
             play() {
                 if (!this.isReady || this.isPlaying) return;
                 
-                if (this.pauseTime >= this.duration - 0.1) {
-                    this.seek(0);
+                if (this.seekOffset >= this.duration - 0.1) {
+                    this.seekOffset = 0;
                 }
 
                 this.isPlaying = true;
@@ -654,9 +643,9 @@
                 }
                 
                 if (this.startTime > 0) {
-                    this.pauseTime = performance.now();
-                    const elapsed = (this.pauseTime - this.startTime) / 1000;
+                    const elapsed = (performance.now() - this.startTime) / 1000;
                     this.seekOffset += elapsed * this.playbackSpeed;
+                    this.startTime = 0;
                 }
             }
 
@@ -664,10 +653,7 @@
                 const wasPlaying = this.isPlaying;
                 this.pause();
                 this.seekOffset = Math.max(0, Math.min(time, this.duration));
-                this.pauseTime = 0;
-                
                 this.renderFrameAt(this.seekOffset);
-                
                 if (wasPlaying) this.play();
             }
 
@@ -683,9 +669,10 @@
                 }
 
                 if (bestFrame) {
-                    this.canvas.width = bestFrame.displayWidth;
-                    this.canvas.height = bestFrame.displayHeight;
-                    this.ctx.drawImage(bestFrame, 0, 0, this.canvas.width, this.canvas.height);
+                    this.canvas.width = bestFrame.frame.displayWidth;
+                    this.canvas.height = bestFrame.frame.displayHeight;
+                    this.ctx.drawImage(bestFrame.frame, 0, 0, this.canvas.width, this.canvas.height);
+                    this.lastDrawnFrame = bestFrame;
                 }
             }
 
@@ -694,44 +681,26 @@
 
                 const now = performance.now();
                 const elapsed = (now - this.startTime) / 1000;
-                this.currentTime = this.seekOffset + (elapsed * this.playbackSpeed);
+                const current = this.seekOffset + (elapsed * this.playbackSpeed);
 
-                if (this.currentTime >= this.duration) {
-                    this.currentTime = this.duration;
+                if (current >= this.duration) {
                     this.renderFrameAt(this.duration);
-                    if (this.onTimeUpdate) this.onTimeUpdate(this.currentTime, this.duration);
+                    if (this.onTimeUpdate) this.onTimeUpdate(this.duration, this.duration);
                     this.pause();
                     if (this.onEnded) this.onEnded();
                     return;
                 }
 
-                const targetTs = this.currentTime * 1000000;
-                let bestFrame = null;
-                let bestIndex = -1;
-                
-                for (let i = this.videoFrames.length - 1; i >= 0; i--) {
-                    if (this.videoFrames[i].timestamp <= targetTs) {
-                        bestFrame = this.videoFrames[i];
-                        bestIndex = i;
-                        break;
-                    }
-                }
+                this.renderFrameAt(current);
 
-                if (bestFrame && bestFrame !== this.lastDrawnFrame) {
-                    this.canvas.width = bestFrame.displayWidth;
-                    this.canvas.height = bestFrame.displayHeight;
-                    this.ctx.drawImage(bestFrame, 0, 0, this.canvas.width, this.canvas.height);
-                    this.lastDrawnFrame = bestFrame;
-                }
-
-                if (this.onTimeUpdate) this.onTimeUpdate(this.currentTime, this.duration);
+                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
 
                 this.rafId = requestAnimationFrame(() => this.renderLoop());
             }
 
             setSpeed(speed) {
                 const wasPlaying = this.isPlaying;
-                const current = this.currentTime || this.seekOffset;
+                const current = this.currentTime;
                 this.playbackSpeed = speed;
                 if (wasPlaying) {
                     this.seekOffset = current;
@@ -765,9 +734,6 @@
                     return this.seekOffset + (elapsed * this.playbackSpeed);
                 }
                 return this.seekOffset;
-            }
-
-            set currentTime(val) {
             }
         }
 
