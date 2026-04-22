@@ -121,71 +121,32 @@
                 this.onReady = null;
             }
 
-            async loadFile(file) {
-                this.reset();
-                const buffer = await file.arrayBuffer();
-                await this.processFLV(buffer);
-            }
+            async loadFile(file) { this.reset(); const buffer = await file.arrayBuffer(); await this.processFLV(buffer); }
 
-            reset() {
-                this.pause();
-                this.videoTags = [];
-                this.isReady = false;
-                this.duration = 0;
-                this.seekOffset = 0;
-                this.hasEnded = false;
-            }
+            reset() { this.pause(); this.videoTags = []; this.isReady = false; this.duration = 0; this.seekOffset = 0; this.hasEnded = false; }
 
             async processFLV(buffer) {
-                const view = new DataView(buffer);
-                let offset = 13;
-                const mp3Chunks = [];
-                let maxTimestamp = 0;
-
+                const view = new DataView(buffer); let offset = 13; const mp3Chunks = []; let maxTimestamp = 0;
                 while (offset < buffer.byteLength) {
                     if (offset + 11 > buffer.byteLength) break;
                     const tagType = view.getUint8(offset);
                     const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
                     const timestamp = (view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24);
                     const dOffset = offset + 11;
-
-                    if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) {
-                        const aInfo = view.getUint8(dOffset);
-                        if (((aInfo & 0xF0) >> 4) === 2) {
-                            mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize));
-                        }
-                    } else if (tagType === 0x09 && dOffset + 5 < buffer.byteLength) {
-                        const vInfo = view.getUint8(dOffset);
-                        const pType = view.getUint8(dOffset + 1);
+                    if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) { const aInfo = view.getUint8(dOffset); if (((aInfo & 0xF0) >> 4) === 2) { mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize)); } }
+                    else if (tagType === 0x09 && dOffset + 5 < buffer.byteLength) {
+                        const vInfo = view.getUint8(dOffset); const pType = view.getUint8(dOffset + 1);
                         if ((vInfo & 0x0F) === 7) {
-                            const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
-                            const isKeyframe = (vInfo >> 4) === 1;
-                            this.videoTags.push({
-                                type: isKeyframe ? 'key' : 'delta',
-                                timestamp: timestamp * 1000,
-                                data: payload,
-                                pType,
-                                tsSec: timestamp / 1000
-                            });
+                            const payload = buffer.slice(dOffset + 5, dOffset + dataSize); const isKeyframe = (vInfo >> 4) === 1;
+                            this.videoTags.push({ type: isKeyframe ? 'key' : 'delta', timestamp: timestamp * 1000,  payload, pType, tsSec: timestamp / 1000 });
                             if (timestamp > maxTimestamp) maxTimestamp = timestamp;
                         }
                     }
                     offset += 11 + dataSize + 4;
                 }
-
                 this.duration = maxTimestamp / 1000;
-
-                if (mp3Chunks.length > 0) {
-                    const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
-                    const audioArrayBuffer = await fullAudioBlob.arrayBuffer();
-                    if (!this.audioCtx) {
-                        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    }
-                    this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
-                }
-
-                this.isReady = true;
-                if (this.onReady) this.onReady(this.duration);
+                if (mp3Chunks.length > 0) { const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' }); const audioArrayBuffer = await fullAudioBlob.arrayBuffer(); if (!this.audioCtx) { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer); }
+                this.isReady = true; if (this.onReady) this.onReady(this.duration);
             }
 
             setupVideoDecoder(startFromIndex) {
@@ -195,226 +156,78 @@
                         const relativeTime = (frameTime - this.seekOffset) / this.playbackSpeed;
                         const scheduledTime = this.videoStartTime + relativeTime * 1000;
                         const wait = scheduledTime - performance.now();
-                        
-                        setTimeout(() => {
-                            if (!this.isPlaying) return;
-                            this.canvas.width = frame.displayWidth;
-                            this.canvas.height = frame.displayHeight;
-                            this.ctx.drawImage(frame, 0, 0);
-                            frame.close();
-                        }, Math.max(0, wait));
-                    },
-                    error: (e) => console.error(e)
+                        setTimeout(() => { if (!this.isPlaying) return; this.canvas.width = frame.displayWidth; this.canvas.height = frame.displayHeight; this.ctx.drawImage(frame, 0, 0); frame.close(); }, Math.max(0, wait));
+                    }, error: (e) => console.error(e)
                 });
-
-                let config = null;
-                for (let i = 0; i < this.videoTags.length; i++) {
-                    if (this.videoTags[i].pType === 0) {
-                        config = { codec: 'avc1.42E01E', description: this.videoTags[i].data };
-                        break;
-                    }
-                }
-
-                if (!config) throw new Error('No AVCDecoderConfiguration found');
-
-                this.videoDecoder.configure(config);
-
-                for (let i = startFromIndex; i < this.videoTags.length; i++) {
-                    const tag = this.videoTags[i];
-                    if (tag.pType === 0) continue;
-                    this.videoDecoder.decode(new EncodedVideoChunk({
-                        type: tag.type,
-                        timestamp: tag.timestamp,
-                        data: tag.data
-                    }));
-                }
+                let config = null; for (let i = 0; i < this.videoTags.length; i++) { if (this.videoTags[i].pType === 0) { config = { codec: 'avc1.42E01E', description: this.videoTags[i].data }; break; } }
+                if (!config) throw new Error('No AVCDecoderConfiguration found'); this.videoDecoder.configure(config);
+                for (let i = startFromIndex; i < this.videoTags.length; i++) { const tag = this.videoTags[i]; if (tag.pType === 0) continue; this.videoDecoder.decode(new EncodedVideoChunk({ type: tag.type, timestamp: tag.timestamp,  tag.data })); }
             }
 
             play() {
                 if (!this.isReady || this.isPlaying) return;
-                
-                if (this.hasEnded) {
-                    this.seekOffset = 0;
-                    this.hasEnded = false;
-                }
-
-                this.isPlaying = true;
-                this.videoStartTime = performance.now();
-
-                let startIndex = 0;
-                if (this.seekOffset > 0) {
-                    for (let i = this.videoTags.length - 1; i >= 0; i--) {
-                        if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') {
-                            startIndex = i;
-                            break;
-                        }
-                    }
-                }
+                if (this.hasEnded || this.seekOffset >= this.duration - 0.2) { this.seekOffset = 0; this.hasEnded = false; }
+                this.isPlaying = true; this.videoStartTime = performance.now();
+                let startIndex = 0; if (this.seekOffset > 0) { for (let i = this.videoTags.length - 1; i >= 0; i--) { if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') { startIndex = i; break; } } }
                 this.setupVideoDecoder(startIndex);
-
                 if (this.audioBuffer && this.audioCtx) {
-                    this.audioSource = this.audioCtx.createBufferSource();
-                    this.audioSource.buffer = this.audioBuffer;
-                    this.gainNode = this.audioCtx.createGain();
-                    this.gainNode.gain.value = this.volume;
-                    this.audioSource.connect(this.gainNode);
-                    this.gainNode.connect(this.audioCtx.destination);
-                    
-                    // 🎵 SES PERDESİ DÜZELTMESİ: playbackRate yerine zaman genişletme
-                    // Basit çözüm: playbackRate = 1 sabit tut, sadece video hızını değiştir
-                    this.audioSource.playbackRate.value = 1; // ← PITCH KORUMA İÇİN KRİTİK
-                    
+                    this.audioSource = this.audioCtx.createBufferSource(); this.audioSource.buffer = this.audioBuffer;
+                    this.gainNode = this.audioCtx.createGain(); this.gainNode.gain.value = this.volume;
+                    this.audioSource.connect(this.gainNode); this.gainNode.connect(this.audioCtx.destination);
+                    this.audioSource.playbackRate.value = this.playbackSpeed;
                     if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
                     this.audioSource.start(0, this.seekOffset);
-                    
-                    this.audioSource.onended = () => {
-                        if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
-                            this.pause();
-                            this.hasEnded = true;
-                            if (this.onEnded) this.onEnded();
-                        }
-                    };
+                    this.audioSource.onended = () => { if (this.isPlaying && this.currentTime >= this.duration - 0.5) { this.pause(); this.hasEnded = true; if (this.onEnded) this.onEnded(); } };
                 }
-
                 this.timeLoop();
             }
 
             pause() {
                 if (!this.isPlaying) return;
+                // ✅ TEK EKLEME: Durdururken mevcut konumu kaydet
+                this.seekOffset = this.currentTime;
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
-                if (this.videoDecoder) {
-                    try { this.videoDecoder.close(); } catch(e) {}
-                    this.videoDecoder = null;
-                }
-                if (this.audioSource) {
-                    try { this.audioSource.stop(); } catch(e) {}
-                    this.audioSource = null;
-                }
+                if (this.videoDecoder) { try { this.videoDecoder.close(); } catch(e) {} this.videoDecoder = null; }
+                if (this.audioSource) { try { this.audioSource.stop(); } catch(e) {} this.audioSource = null; }
             }
 
-            seek(time) {
-                const wasPlaying = this.isPlaying;
-                this.pause();
-                this.seekOffset = Math.max(0, Math.min(time, this.duration));
-                this.hasEnded = false;
-                if (wasPlaying) {
-                    setTimeout(() => this.play(), 50);
-                }
-            }
-
-            timeLoop() {
-                if (!this.isPlaying) return;
-                const current = this.currentTime;
-                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
-                if (current >= this.duration) {
-                    this.pause();
-                    this.hasEnded = true;
-                    if (this.onEnded) this.onEnded();
-                    return;
-                }
-                this.rafId = requestAnimationFrame(() => this.timeLoop());
-            }
-
-            setSpeed(speed) {
-                this.playbackSpeed = speed;
-                // Audio playbackRate'i değiştirmiyoruz, sadece video zamanlaması etkilensin
-            }
-
-            setVolume(vol) {
-                this.volume = vol;
-                if (this.gainNode) this.gainNode.gain.value = vol;
-            }
-
-            get currentTime() {
-                if (!this.isPlaying) return this.seekOffset;
-                const elapsed = (performance.now() - this.videoStartTime) / 1000;
-                return this.seekOffset + (elapsed * this.playbackSpeed);
-            }
+            seek(time) { const wasPlaying = this.isPlaying; this.pause(); this.seekOffset = Math.max(0, Math.min(time, this.duration)); this.hasEnded = false; if (wasPlaying) { setTimeout(() => this.play(), 50); } }
+            timeLoop() { if (!this.isPlaying) return; const current = this.currentTime; if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration); if (current >= this.duration) { this.pause(); this.hasEnded = true; if (this.onEnded) this.onEnded(); return; } this.rafId = requestAnimationFrame(() => this.timeLoop()); }
+            setSpeed(speed) { const wasPlaying = this.isPlaying; const current = this.currentTime; this.playbackSpeed = speed; if (wasPlaying) { this.pause(); this.seekOffset = current; this.hasEnded = false; setTimeout(() => this.play(), 50); } }
+            setVolume(vol) { this.volume = vol; if (this.gainNode) this.gainNode.gain.value = vol; }
+            get currentTime() { if (!this.isPlaying) return this.seekOffset; const elapsed = (performance.now() - this.videoStartTime) / 1000; return this.seekOffset + (elapsed * this.playbackSpeed); }
         }
 
-        // UI kısmı orijinal kodunla birebir aynı
         window.onload = function() {
-            const container = document.getElementById('video_player');
-            const canvas = document.getElementById('main_canvas');
-            const statusText = document.getElementById('status_text');
-            const playPauseBtn = document.getElementById('play_pause');
-            const overlayBtn = document.getElementById('overlay_btn');
-            const progressArea = document.getElementById('progress_area');
-            const progressBar = progressArea.querySelector('.progress-bar');
-            const volumeSlider = document.getElementById('volume_slider');
-            const muteBtn = document.getElementById('mute_btn');
-            const currentTimeEl = document.getElementById('current_time');
-            const durationEl = document.getElementById('duration');
-            const speedBtn = document.getElementById('speed_btn');
-            const speedMenu = document.getElementById('speed_menu');
-            const speedItems = document.querySelectorAll('.speed-item');
-            const fullscreenBtn = document.getElementById('fullscreen_btn');
-            const rippleLeft = document.getElementById('ripple_left');
-            const rippleRight = document.getElementById('ripple_right');
-            const speedBadge = document.getElementById('speed_badge');
-            const fileInput = document.getElementById('fileInput');
-            const fileBtn = document.getElementById('file_btn');
-
-            const player = new FLVPlayer(canvas);
-            let hideControlsTimeout;
-            let isTouchDevice = false;
-            let isDragging = false;
-            let holdTimeout;
-            let originalSpeed = 1;
-            let fileLoaded = false;
-            let lastDragPos = 0;
-
+            const container = document.getElementById('video_player'), canvas = document.getElementById('main_canvas'), statusText = document.getElementById('status_text'), playPauseBtn = document.getElementById('play_pause'), overlayBtn = document.getElementById('overlay_btn'), progressArea = document.getElementById('progress_area'), progressBar = progressArea.querySelector('.progress-bar'), volumeSlider = document.getElementById('volume_slider'), muteBtn = document.getElementById('mute_btn'), currentTimeEl = document.getElementById('current_time'), durationEl = document.getElementById('duration'), speedBtn = document.getElementById('speed_btn'), speedMenu = document.getElementById('speed_menu'), speedItems = document.querySelectorAll('.speed-item'), fullscreenBtn = document.getElementById('fullscreen_btn'), rippleLeft = document.getElementById('ripple_left'), rippleRight = document.getElementById('ripple_right'), speedBadge = document.getElementById('speed_badge'), fileInput = document.getElementById('fileInput'), fileBtn = document.getElementById('file_btn');
+            const player = new FLVPlayer(canvas); let hideControlsTimeout, isTouchDevice = false, isDragging = false, holdTimeout, originalSpeed = 1, fileLoaded = false, lastDragPos = 0;
             refreshIcons();
-
             fileBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
-
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                statusText.textContent = "Yükleniyor..."; container.classList.remove('no-file');
-                try {
-                    await player.loadFile(file); fileLoaded = true; statusText.style.display = 'none';
-                    playPauseBtn.disabled = false; muteBtn.disabled = false; speedBtn.disabled = false;
-                    togglePlay();
-                } catch (err) { statusText.textContent = "Hata: " + err.message; statusText.style.display = 'block'; console.error(err); }
-            });
-
+            fileInput.addEventListener('change', async (e) => { const file = e.target.files[0]; if (!file) return; statusText.textContent = "Yükleniyor..."; container.classList.remove('no-file'); try { await player.loadFile(file); fileLoaded = true; statusText.style.display = 'none'; playPauseBtn.disabled = false; muteBtn.disabled = false; speedBtn.disabled = false; togglePlay(); } catch (err) { statusText.textContent = "Hata: " + err.message; statusText.style.display = 'block'; console.error(err); } });
             container.addEventListener('contextmenu', e => e.preventDefault());
-
             function formatTime(time) { if (isNaN(time) || time === Infinity || time < 0) return "0:00"; let min = Math.floor(time / 60), sec = Math.floor(time % 60); return `${min}:${sec < 10 ? '0' + sec : sec}`; }
             function showControls() { container.classList.add('show-controls'); clearTimeout(hideControlsTimeout); if (player.isPlaying && !speedMenu.classList.contains('active') && !isDragging) { hideControlsTimeout = setTimeout(hideControls, 3000); } }
             function hideControls() { if (isDragging) return; container.classList.remove('show-controls'); clearTimeout(hideControlsTimeout); speedMenu.classList.remove('active'); }
             function showRipple(element) { element.classList.remove('active'); void element.offsetWidth; element.classList.add('active'); }
-
             const startSpeedBoost = (e) => { clearTimeout(holdTimeout); if (e.touches && e.touches.length !== 1) { endSpeedBoost(); return; } if (!player.isReady || !player.isPlaying || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu, .file-input-wrapper')) return; holdTimeout = setTimeout(() => { originalSpeed = player.playbackSpeed; player.setSpeed(2.0); speedBadge.classList.add('active'); container.classList.remove('show-controls'); }, 400); };
             const endSpeedBoost = () => { clearTimeout(holdTimeout); if (speedBadge.classList.contains('active')) { player.setSpeed(originalSpeed); speedBadge.classList.remove('active'); showControls(); } };
-
             container.addEventListener('mousedown', (e) => { if (!isTouchDevice) startSpeedBoost(e); }); window.addEventListener('mouseup', endSpeedBoost);
             container.addEventListener('touchstart', (e) => { isTouchDevice = true; if (e.touches.length === 1) startSpeedBoost(e); else endSpeedBoost(); }, {passive: true}); window.addEventListener('touchend', endSpeedBoost); window.addEventListener('touchcancel', endSpeedBoost);
             container.addEventListener('dblclick', (e) => { if (!player.isReady || e.target.closest('#progress_area, .file-input-wrapper')) return; e.preventDefault(); const rect = container.getBoundingClientRect(); const x = e.clientX - rect.left; if (x < rect.width / 2) { player.seek(Math.max(0, player.currentTime - 10)); showRipple(rippleLeft); } else { player.seek(Math.min(player.duration, player.currentTime + 10)); showRipple(rippleRight); } showControls(); });
             container.addEventListener('mousemove', () => { if (!isTouchDevice) showControls(); });
             container.addEventListener('click', (e) => { if (e.target === container || e.target === canvas) { if (!fileLoaded) { fileInput.click(); return; } if (container.classList.contains('show-controls')) hideControls(); else showControls(); } });
-
             function updatePlayIcon(name) { playPauseBtn.innerHTML = `<i data-lucide="${name}"></i>`; overlayBtn.innerHTML = `<i data-lucide="${name}" style="width: 32px; height: 32px; color: white;"></i>`; refreshIcons(); }
-
-            async function togglePlay() {
-                if (!player.isReady) { if (!fileLoaded) fileInput.click(); return; }
-                if (player.isPlaying) { player.pause(); container.classList.remove('playing'); updatePlayIcon('play'); showControls(); }
-                else { if (player.hasEnded) { player.seekOffset = 0; player.hasEnded = false; } player.play(); container.classList.add('playing'); container.classList.remove('ended'); updatePlayIcon('pause'); showControls(); }
-            }
-
+            async function togglePlay() { if (!player.isReady) { if (!fileLoaded) fileInput.click(); return; } if (player.isPlaying) { player.pause(); container.classList.remove('playing'); updatePlayIcon('play'); showControls(); } else { if (player.hasEnded) { player.seekOffset = 0; player.hasEnded = false; } player.play(); container.classList.add('playing'); container.classList.remove('ended'); updatePlayIcon('pause'); showControls(); } }
             function updateProgress(clientX) { if (!player.isReady) return; const rect = progressArea.getBoundingClientRect(); let pos = (clientX - rect.left) / rect.width; pos = Math.max(0, Math.min(1, pos)); lastDragPos = pos; progressBar.style.width = `${pos * 100}%`; currentTimeEl.innerText = formatTime(pos * player.duration); }
             function startDragging(e) { if (!player.isReady) return; isDragging = true; clearTimeout(holdTimeout); progressArea.classList.add('dragging'); const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; updateProgress(clientX); showControls(); }
             function onDragging(e) { if (!isDragging) return; const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; updateProgress(clientX); }
             function stopDragging() { if (isDragging) { isDragging = false; progressArea.classList.remove('dragging'); player.seek(lastDragPos * player.duration); showControls(); } }
-
             progressArea.addEventListener('mousedown', startDragging); window.addEventListener('mousemove', onDragging); window.addEventListener('mouseup', stopDragging);
             progressArea.addEventListener('touchstart', startDragging, { passive: false }); window.addEventListener('touchmove', (e) => { if(isDragging) { e.preventDefault(); onDragging(e); } }, { passive: false }); window.addEventListener('touchend', stopDragging);
-
             player.onTimeUpdate = (current, duration) => { if (!isDragging) { progressBar.style.width = `${(current / duration) * 100}%`; currentTimeEl.innerText = formatTime(current); } durationEl.innerText = formatTime(duration); };
             player.onReady = (duration) => { durationEl.innerText = formatTime(duration); };
             player.onEnded = () => { container.classList.remove('playing'); container.classList.add('ended'); updatePlayIcon('rotate-ccw'); showControls(); endSpeedBoost(); };
-
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); }); overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             speedBtn.addEventListener('click', (e) => { e.stopPropagation(); endSpeedBoost(); speedMenu.classList.toggle('active'); });
             speedItems.forEach(item => { item.addEventListener('click', (e) => { e.stopPropagation(); const speed = parseFloat(item.dataset.speed); player.setSpeed(speed); originalSpeed = speed; speedItems.forEach(i => i.classList.remove('selected')); item.classList.add('selected'); speedMenu.classList.remove('active'); }); });
