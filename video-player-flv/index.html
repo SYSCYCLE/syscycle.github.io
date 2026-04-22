@@ -13,394 +13,156 @@
             --text-color: #f8fafc;
             --accent-color: rgba(59, 130, 246, 0.2);
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #1e293b;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: var(--text-color);
-            overflow: hidden;
-            flex-direction: column;
-            gap: 20px;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; color: var(--text-color); overflow: hidden;
+            flex-direction: column; gap: 20px;
         }
-
         .video-container {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            background-color: #000;
-            border-radius: 12px;
-            overflow: hidden;
+            position: relative; width: 100%; max-width: 800px;
+            background-color: #000; border-radius: 12px; overflow: hidden;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-            aspect-ratio: 16 / 9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-touch-callout: none;
+            aspect-ratio: 16 / 9; display: flex; align-items: center;
+            justify-content: center; user-select: none; cursor: pointer;
+            touch-action: manipulation; -webkit-touch-callout: none;
         }
-
         .video-container:fullscreen {
-            max-width: 100vw;
-            max-height: 100vh;
-            width: 100vw;
-            height: 100vh;
-            border-radius: 0;
-            aspect-ratio: auto;
+            max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh;
+            border-radius: 0; aspect-ratio: auto;
         }
-
-        .video-container:fullscreen canvas {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        canvas {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            display: block;
-            pointer-events: none;
-        }
-
+        .video-container:fullscreen canvas { width: 100%; height: 100%; object-fit: contain; }
+        canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; display: block; pointer-events: none; }
         .video-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 20px;
             background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 20;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+            display: flex; flex-direction: column; gap: 10px; z-index: 20;
         }
-
-        .video-container.show-controls .video-controls {
-            opacity: 1;
-            visibility: visible;
-        }
-
+        .video-container.show-controls .video-controls { opacity: 1; visibility: visible; }
         .progress-area {
-            height: 5px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            border-radius: 10px;
-            position: relative;
-            transition: height 0.1s ease;
-            display: flex;
-            align-items: center;
+            height: 5px; width: 100%; background: rgba(255, 255, 255, 0.2);
+            cursor: pointer; border-radius: 10px; position: relative;
+            transition: height 0.1s ease; display: flex; align-items: center;
         }
-
-        .progress-area:hover, .progress-area.dragging {
-            height: 8px;
-        }
-
+        .progress-area:hover, .progress-area.dragging { height: 8px; }
         .progress-bar {
-            height: 100%;
-            width: 0%;
-            background-color: var(--primary-color);
-            border-radius: 10px;
-            position: relative;
+            height: 100%; width: 0%; background-color: var(--primary-color);
+            border-radius: 10px; position: relative;
         }
-
         .progress-bar::after {
-            content: '';
-            position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 14px;
-            height: 14px;
-            background: #fff;
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            content: ''; position: absolute; right: -6px; top: 50%;
+            transform: translateY(-50%); width: 14px; height: 14px;
+            background: #fff; border-radius: 50%; opacity: 0;
+            transition: opacity 0.2s; box-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
-
         .progress-area:hover .progress-bar::after, 
-        .progress-area.dragging .progress-bar::after {
-            opacity: 1;
-        }
-
-        .controls-main {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .controls-left, .controls-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
+        .progress-area.dragging .progress-bar::after { opacity: 1; }
+        .controls-main { display: flex; align-items: center; justify-content: space-between; }
+        .controls-left, .controls-right { display: flex; align-items: center; gap: 15px; }
         .control-btn {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 5px;
-            transition: transform 0.1s ease, color 0.2s ease, opacity 0.2s ease;
+            background: none; border: none; color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            padding: 5px; transition: transform 0.1s ease, color 0.2s ease, opacity 0.2s ease;
             outline: none;
         }
-
-        .control-btn:hover {
-            color: var(--primary-color);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .time-display {
-            font-size: 14px;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .volume-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
+        .control-btn:hover { color: var(--primary-color); }
+        .control-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .time-display { font-size: 14px; font-variant-numeric: tabular-nums; }
+        .volume-container { display: flex; align-items: center; gap: 8px; }
         .volume-slider {
-            width: 0;
-            height: 4px;
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-            transition: width 0.3s ease;
-            overflow: hidden;
-            cursor: pointer;
-            outline: none;
+            width: 0; height: 4px; -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.3); border-radius: 5px;
+            transition: width 0.3s ease; overflow: hidden; cursor: pointer; outline: none;
         }
-
-        .volume-container:hover .volume-slider {
-            width: 80px;
-        }
-
+        .volume-container:hover .volume-slider { width: 80px; }
         .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 12px;
-            width: 12px;
-            background: #fff;
-            box-shadow: -80px 0 0 80px var(--primary-color);
+            -webkit-appearance: none; height: 12px; width: 12px;
+            background: #fff; box-shadow: -80px 0 0 80px var(--primary-color);
         }
-
         .speed-menu {
-            position: absolute;
-            bottom: 45px;
-            right: 0;
-            background: var(--control-bg);
-            border-radius: 8px;
-            padding: 8px 0;
-            min-width: 120px;
-            display: none;
-            flex-direction: column;
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 30;
+            position: absolute; bottom: 45px; right: 0;
+            background: var(--control-bg); border-radius: 8px; padding: 8px 0;
+            min-width: 120px; display: none; flex-direction: column;
+            backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); z-index: 30;
         }
-
         .speed-menu.active {
-            display: flex;
-            animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         .speed-item {
-            padding: 10px 16px;
-            color: white;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
+            padding: 10px 16px; color: white; font-size: 13px; cursor: pointer;
+            display: flex; justify-content: space-between;
         }
-
-        .speed-item:hover {
-            background: var(--accent-color);
-            color: var(--primary-color);
-        }
-
-        .speed-item.selected {
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
+        .speed-item:hover { background: var(--accent-color); color: var(--primary-color); }
+        .speed-item.selected { color: var(--primary-color); font-weight: 600; }
         .speed-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 6px 12px;
-            border-radius: 20px;
-            display: none;
-            align-items: center;
-            gap: 8px;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            backdrop-filter: blur(4px);
-            z-index: 15;
-            pointer-events: none;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0, 0, 0, 0.6); padding: 6px 12px; border-radius: 20px;
+            display: none; align-items: center; gap: 8px; color: white;
+            font-weight: bold; font-size: 14px; backdrop-filter: blur(4px);
+            z-index: 15; pointer-events: none;
         }
-
-        .speed-badge.active {
-            display: flex;
-        }
-
+        .speed-badge.active { display: flex; }
         .overlay-play {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: var(--primary-color);
-            border-radius: 50%;
-            width: 70px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            z-index: 5;
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: var(--primary-color);
+            border-radius: 50%; width: 70px; height: 70px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            z-index: 5; pointer-events: none;
         }
-
         .video-container.show-controls:not(.playing) .overlay-play,
         .video-container.ended .overlay-play,
         .video-container.no-file .overlay-play {
-            opacity: 0.95;
-            visibility: visible;
-            pointer-events: auto;
+            opacity: 0.95; visibility: visible; pointer-events: auto;
         }
-
         .seek-ripple {
-            position: absolute;
-            top: 0;
-            width: 40%;
-            height: 100%;
+            position: absolute; top: 0; width: 40%; height: 100%;
             background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 10;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; opacity: 0; pointer-events: none; z-index: 10;
         }
-
         .seek-ripple.left { left: 0; border-radius: 0 50% 50% 0; }
         .seek-ripple.right { right: 0; border-radius: 50% 0 0 50%; }
-
-        .seek-text {
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            margin-top: 8px;
-        }
-
-        .seek-ripple.active {
-            animation: rippleAnim 0.7s ease-out;
-        }
-
+        .seek-text { font-size: 18px; font-weight: bold; color: white; margin-top: 8px; }
+        .seek-ripple.active { animation: rippleAnim 0.7s ease-out; }
         @keyframes rippleAnim {
             0% { opacity: 0; transform: scale(0.8); }
             30% { opacity: 1; }
             100% { opacity: 0; transform: scale(1.2); }
         }
-
         .file-input-wrapper {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 25;
-            display: flex;
-            gap: 10px;
+            position: absolute; top: 20px; left: 20px; z-index: 25;
+            display: flex; gap: 10px;
         }
-
         .file-btn {
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-            pointer-events: auto;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2); color: white;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            font-size: 13px; font-weight: 600; display: flex;
+            align-items: center; gap: 6px; transition: all 0.2s; pointer-events: auto;
         }
-
-        .file-btn:hover {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        #fileInput {
-            display: none;
-        }
-
+        .file-btn:hover { background: var(--primary-color); border-color: var(--primary-color); }
+        #fileInput { display: none; }
         .status-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: rgba(255,255,255,0.7);
-            font-size: 16px;
-            pointer-events: none;
-            z-index: 2;
-            text-align: center;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); color: rgba(255,255,255,0.7);
+            font-size: 16px; pointer-events: none; z-index: 2; text-align: center;
         }
-
-        svg {
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
+        svg { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
     <div class="video-container show-controls no-file" id="video_player">
         <canvas id="main_canvas"></canvas>
-        
         <div class="status-text" id="status_text">FLV dosyası seçmek için tıklayın</div>
-
         <div class="file-input-wrapper">
             <button class="file-btn" id="file_btn">
                 <i data-lucide="folder-open" style="width: 16px; height: 16px;"></i>
@@ -408,12 +170,10 @@
             </button>
             <input type="file" id="fileInput" accept=".flv">
         </div>
-
         <div class="speed-badge" id="speed_badge">
             <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
             <span>2x Oynatılıyor</span>
         </div>
-
         <div class="seek-ripple left" id="ripple_left">
             <i data-lucide="chevrons-left" style="width: 40px; height: 40px;"></i>
             <span class="seek-text">« 10</span>
@@ -422,16 +182,13 @@
             <i data-lucide="chevrons-right" style="width: 40px; height: 40px;"></i>
             <span class="seek-text">10 »</span>
         </div>
-
         <div class="overlay-play" id="overlay_btn">
             <i data-lucide="play" id="overlay_icon" style="width: 32px; height: 32px; color: white;"></i>
         </div>
-
         <div class="video-controls">
             <div class="progress-area" id="progress_area">
                 <div class="progress-bar"></div>
             </div>
-
             <div class="controls-main">
                 <div class="controls-left">
                     <button class="control-btn" id="play_pause" disabled>
@@ -447,7 +204,6 @@
                         <span id="current_time">0:00</span> / <span id="duration">0:00</span>
                     </div>
                 </div>
-
                 <div class="controls-right">
                     <button class="control-btn" id="speed_btn" disabled>
                         <i data-lucide="gauge"></i>
@@ -469,9 +225,7 @@
     </div>
 
     <script>
-        function refreshIcons() {
-            if (window.lucide) window.lucide.createIcons();
-        }
+        function refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
 
         class FLVPlayer {
             constructor(canvas) {
@@ -481,23 +235,19 @@
                 this.audioBuffer = null;
                 this.audioSource = null;
                 this.gainNode = null;
-                
                 this.audioElement = null;
                 this.audioBlobUrl = null;
-                
                 this.videoTags = [];
                 this.duration = 0;
                 this.isPlaying = false;
                 this.isReady = false;
                 this.playbackSpeed = 1;
                 this.volume = 1;
-                
                 this.seekOffset = 0;
                 this.videoStartTime = 0;
                 this.rafId = null;
                 this.videoDecoder = null;
                 this.hasEnded = false;
-                
                 this.onTimeUpdate = null;
                 this.onEnded = null;
                 this.onReady = null;
@@ -516,15 +266,8 @@
                 this.duration = 0;
                 this.seekOffset = 0;
                 this.hasEnded = false;
-                
-                if (this.audioBlobUrl) {
-                    URL.revokeObjectURL(this.audioBlobUrl);
-                    this.audioBlobUrl = null;
-                }
-                if (this.audioElement) {
-                    this.audioElement.src = '';
-                    this.audioElement = null;
-                }
+                if (this.audioBlobUrl) { URL.revokeObjectURL(this.audioBlobUrl); this.audioBlobUrl = null; }
+                if (this.audioElement) { this.audioElement.src = ''; this.audioElement = null; }
             }
 
             async processFLV(buffer) {
@@ -532,49 +275,34 @@
                 let offset = 13;
                 const mp3Chunks = [];
                 let maxTimestamp = 0;
-
                 while (offset < buffer.byteLength) {
                     if (offset + 11 > buffer.byteLength) break;
                     const tagType = view.getUint8(offset);
                     const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
                     const timestamp = (view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24);
                     const dOffset = offset + 11;
-
                     if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) {
                         const aInfo = view.getUint8(dOffset);
-                        if (((aInfo & 0xF0) >> 4) === 2) {
-                            mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize));
-                        }
+                        if (((aInfo & 0xF0) >> 4) === 2) { mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize)); }
                     } else if (tagType === 0x09 && dOffset + 5 < buffer.byteLength) {
                         const vInfo = view.getUint8(dOffset);
                         const pType = view.getUint8(dOffset + 1);
                         if ((vInfo & 0x0F) === 7) {
                             const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
                             const isKeyframe = (vInfo >> 4) === 1;
-                            this.videoTags.push({
-                                type: isKeyframe ? 'key' : 'delta',
-                                timestamp: timestamp * 1000,
-                                data: payload,
-                                pType,
-                                tsSec: timestamp / 1000
-                            });
+                            this.videoTags.push({ type: isKeyframe ? 'key' : 'delta', timestamp: timestamp * 1000, data: payload, pType, tsSec: timestamp / 1000 });
                             if (timestamp > maxTimestamp) maxTimestamp = timestamp;
                         }
                     }
                     offset += 11 + dataSize + 4;
                 }
-
                 this.duration = maxTimestamp / 1000;
-
                 if (mp3Chunks.length > 0) {
                     const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
                     const audioArrayBuffer = await fullAudioBlob.arrayBuffer();
-                    if (!this.audioCtx) {
-                        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    }
+                    if (!this.audioCtx) { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
                     this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
                 }
-
                 this.isReady = true;
                 if (this.onReady) this.onReady(this.duration);
             }
@@ -582,20 +310,44 @@
             setupVideoDecoder(startFromIndex) {
                 this.videoDecoder = new VideoDecoder({
                     output: (frame) => {
-                        const frameTime = frame.timestamp / 1000000;
-                        const relativeTime = (frameTime - this.seekOffset) / this.playbackSpeed;
-                        const scheduledTime = this.videoStartTime + relativeTime * 1000;
-                        const wait = scheduledTime - performance.now();
+                        // 🎯 SENKRONİZASYON: Audio currentTime'ı ana saat olarak kullan
+                        const frameTimeSec = frame.timestamp / 1000000;
+                        const targetAudioTime = this.seekOffset + (frameTimeSec - this.seekOffset) / this.playbackSpeed;
                         
-                        setTimeout(() => {
-                            if (!this.isPlaying) return;
-                            this.canvas.width = frame.displayWidth;
-                            this.canvas.height = frame.displayHeight;
-                            this.ctx.drawImage(frame, 0, 0);
-                            frame.close();
-                        }, Math.max(0, wait));
+                        const scheduleFrame = () => {
+                            if (!this.isPlaying || !this.audioElement) { frame.close(); return; }
+                            
+                            const audioTime = this.audioElement.currentTime;
+                            const timeDiff = targetAudioTime - audioTime;
+                            
+                            if (timeDiff <= 0.05) {
+                                // Frame'i hemen render et (±50ms tolerans)
+                                this.canvas.width = frame.displayWidth;
+                                this.canvas.height = frame.displayHeight;
+                                this.ctx.drawImage(frame, 0, 0);
+                                frame.close();
+                            } else if (timeDiff < 5) {
+                                // Kısa süre sonra render et
+                                setTimeout(() => {
+                                    if (this.isPlaying) {
+                                        this.canvas.width = frame.displayWidth;
+                                        this.canvas.height = frame.displayHeight;
+                                        this.ctx.drawImage(frame, 0, 0);
+                                    }
+                                    frame.close();
+                                }, Math.max(0, timeDiff * 1000 - 20));
+                            } else {
+                                frame.close(); // Çok uzak frame'i at
+                            }
+                        };
+                        
+                        if (this.audioElement && this.audioElement.readyState >= 2) {
+                            scheduleFrame();
+                        } else {
+                            setTimeout(scheduleFrame, 50);
+                        }
                     },
-                    error: (e) => console.error(e)
+                    error: (e) => console.error('VideoDecoder error:', e)
                 });
 
                 let config = null;
@@ -605,18 +357,14 @@
                         break;
                     }
                 }
-
                 if (!config) throw new Error('No AVCDecoderConfiguration found');
-
                 this.videoDecoder.configure(config);
 
                 for (let i = startFromIndex; i < this.videoTags.length; i++) {
                     const tag = this.videoTags[i];
                     if (tag.pType === 0) continue;
                     this.videoDecoder.decode(new EncodedVideoChunk({
-                        type: tag.type,
-                        timestamp: tag.timestamp,
-                        data: tag.data
+                        type: tag.type, timestamp: tag.timestamp, data: tag.data
                     }));
                 }
             }
@@ -624,61 +372,33 @@
             audioBufferToWav(buffer) {
                 const numChannels = buffer.numberOfChannels;
                 const sampleRate = buffer.sampleRate;
-                const format = 1;
-                const bitDepth = 16;
-                
-                let result;
-                if (numChannels === 2) {
-                    result = this.interleave(buffer.getChannelData(0), buffer.getChannelData(1));
-                } else {
-                    result = buffer.getChannelData(0);
-                }
-                
+                const format = 1, bitDepth = 16;
+                let result = numChannels === 2 ? this.interleave(buffer.getChannelData(0), buffer.getChannelData(1)) : buffer.getChannelData(0);
                 return this.encodeWAV(result, numChannels, sampleRate, format, bitDepth);
             }
-
             interleave(inputL, inputR) {
                 const length = inputL.length + inputR.length;
                 const result = new Float32Array(length);
                 let index = 0, inputIndex = 0;
-                while (index < length) {
-                    result[index++] = inputL[inputIndex];
-                    result[index++] = inputR[inputIndex];
-                    inputIndex++;
-                }
+                while (index < length) { result[index++] = inputL[inputIndex]; result[index++] = inputR[inputIndex]; inputIndex++; }
                 return result;
             }
-
             encodeWAV(samples, numChannels, sampleRate, format, bitDepth) {
                 const bytesPerSample = bitDepth / 8;
                 const blockAlign = numChannels * bytesPerSample;
                 const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
                 const view = new DataView(buffer);
-                
-                this.writeString(view, 0, 'RIFF');
-                view.setUint32(4, 36 + samples.length * bytesPerSample, true);
-                this.writeString(view, 8, 'WAVE');
-                this.writeString(view, 12, 'fmt ');
-                view.setUint32(16, 16, true);
-                view.setUint16(20, format, true);
-                view.setUint16(22, numChannels, true);
-                view.setUint32(24, sampleRate, true);
-                view.setUint32(28, sampleRate * blockAlign, true);
-                view.setUint16(32, blockAlign, true);
-                view.setUint16(34, bitDepth, true);
-                this.writeString(view, 36, 'data');
+                this.writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+                this.writeString(view, 8, 'WAVE'); this.writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true); view.setUint16(20, format, true);
+                view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * blockAlign, true); view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitDepth, true); this.writeString(view, 36, 'data');
                 view.setUint32(40, samples.length * bytesPerSample, true);
-                
                 this.floatTo16BitPCM(view, 44, samples, bitDepth);
                 return new Blob([view], { type: 'audio/wav' });
             }
-
-            writeString(view, offset, string) {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            }
-
+            writeString(view, offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
             floatTo16BitPCM(view, offset, input, bitDepth) {
                 if (bitDepth === 16) {
                     for (let i = 0; i < input.length; i++, offset += 2) {
@@ -695,11 +415,7 @@
 
             play() {
                 if (!this.isReady || this.isPlaying) return;
-                
-                if (this.hasEnded || this.seekOffset >= this.duration - 0.2) {
-                    this.seekOffset = 0;
-                    this.hasEnded = false;
-                }
+                if (this.hasEnded || this.seekOffset >= this.duration - 0.2) { this.seekOffset = 0; this.hasEnded = false; }
 
                 this.isPlaying = true;
                 this.videoStartTime = performance.now();
@@ -707,10 +423,7 @@
                 let startIndex = 0;
                 if (this.seekOffset > 0) {
                     for (let i = this.videoTags.length - 1; i >= 0; i--) {
-                        if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') {
-                            startIndex = i;
-                            break;
-                        }
+                        if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') { startIndex = i; break; }
                     }
                 }
                 this.setupVideoDecoder(startIndex);
@@ -721,56 +434,55 @@
                         this.audioElement.preservesPitch = true;
                         this.audioElement.mozPreservesPitch = true;
                         this.audioElement.webkitPreservesPitch = true;
-                        
                         const wavBlob = this.audioBufferToWav(this.audioBuffer);
                         this.audioBlobUrl = URL.createObjectURL(wavBlob);
                         this.audioElement.src = this.audioBlobUrl;
                         this.audioElement.preload = 'auto';
+                        // 🎯 Senkronizasyon: Audio element hazır olana kadar bekle
+                        this.audioElement.oncanplay = () => {
+                            if (this.isPlaying && !this.audioElement.paused) {
+                                // Audio başladıktan sonra video senkronizasyonu tetikle
+                                this.canvas.dispatchEvent(new CustomEvent('videosync'));
+                            }
+                        };
                     }
                     
                     this.audioElement.volume = this.volume;
                     this.audioElement.playbackRate = this.playbackSpeed;
+                    // 🎯 KRİTİK: Önce currentTime'ı ayarla, SONRA play() çağır
                     this.audioElement.currentTime = this.seekOffset;
                     
-                    if (this.audioCtx.state === 'suspended') {
-                        this.audioCtx.resume();
-                    }
+                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
                     
-                    this.audioElement.play().catch(e => console.error('Audio play error:', e));
+                    // 🎯 Audio play() çağrısından HEMEN ÖNCE videoStartTime'ı güncelle
+                    const playPromise = this.audioElement.play();
+                    if (playPromise) {
+                        playPromise.catch(e => console.error('Audio play error:', e));
+                    }
                     
                     this.audioElement.onended = () => {
                         if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
-                            this.pause();
-                            this.hasEnded = true;
+                            this.pause(); this.hasEnded = true;
                             if (this.onEnded) this.onEnded();
                         }
                     };
                 }
-
                 this.timeLoop();
             }
 
             pause() {
                 if (!this.isPlaying) return;
-                
-                // 🔧 KRİTİK DÜZELTME: Durdurma anındaki gerçek konumu kaydet
-                this.seekOffset = this.currentTime;
-                
+                // 🔧 Durdurma anındaki GERÇEK konumu audio'dan al
+                if (this.audioElement) {
+                    this.seekOffset = Math.min(this.audioElement.currentTime, this.duration);
+                } else {
+                    this.seekOffset = this.currentTime;
+                }
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
-                if (this.videoDecoder) {
-                    try { this.videoDecoder.close(); } catch(e) {}
-                    this.videoDecoder = null;
-                }
-                
-                if (this.audioElement) {
-                    this.audioElement.pause();
-                }
-                
-                if (this.audioSource) {
-                    try { this.audioSource.stop(); } catch(e) {}
-                    this.audioSource = null;
-                }
+                if (this.videoDecoder) { try { this.videoDecoder.close(); } catch(e) {} this.videoDecoder = null; }
+                if (this.audioElement) { this.audioElement.pause(); }
+                if (this.audioSource) { try { this.audioSource.stop(); } catch(e) {} this.audioSource = null; }
             }
 
             seek(time) {
@@ -778,21 +490,18 @@
                 this.pause();
                 this.seekOffset = Math.max(0, Math.min(time, this.duration));
                 this.hasEnded = false;
-                if (wasPlaying) {
-                    setTimeout(() => this.play(), 50);
+                // 🎯 Audio element varsa currentTime'ı da güncelle
+                if (this.audioElement && !this.audioElement.paused) {
+                    this.audioElement.currentTime = this.seekOffset;
                 }
+                if (wasPlaying) { setTimeout(() => this.play(), 50); }
             }
 
             timeLoop() {
                 if (!this.isPlaying) return;
                 const current = this.currentTime;
                 if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
-                if (current >= this.duration) {
-                    this.pause();
-                    this.hasEnded = true;
-                    if (this.onEnded) this.onEnded();
-                    return;
-                }
+                if (current >= this.duration) { this.pause(); this.hasEnded = true; if (this.onEnded) this.onEnded(); return; }
                 this.rafId = requestAnimationFrame(() => this.timeLoop());
             }
 
@@ -815,6 +524,10 @@
             }
 
             get currentTime() {
+                // 🎯 Audio element varsa ondan al (daha doğru)
+                if (this.audioElement && this.isPlaying && !isNaN(this.audioElement.currentTime)) {
+                    return Math.min(this.audioElement.currentTime, this.duration);
+                }
                 if (!this.isPlaying) return this.seekOffset;
                 const elapsed = (performance.now() - this.videoStartTime) / 1000;
                 return this.seekOffset + (elapsed * this.playbackSpeed);
@@ -844,143 +557,72 @@
             const fileBtn = document.getElementById('file_btn');
 
             const player = new FLVPlayer(canvas);
-            let hideControlsTimeout;
-            let isTouchDevice = false;
-            let isDragging = false;
-            let holdTimeout;
-            let originalSpeed = 1;
-            let fileLoaded = false;
-            let lastDragPos = 0;
+            let hideControlsTimeout, isTouchDevice = false, isDragging = false, holdTimeout;
+            let originalSpeed = 1, fileLoaded = false, lastDragPos = 0;
 
             refreshIcons();
 
-            fileBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                fileInput.click();
-            });
+            fileBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
 
             fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                statusText.textContent = "Yükleniyor...";
-                container.classList.remove('no-file');
-                
+                const file = e.target.files[0]; if (!file) return;
+                statusText.textContent = "Yükleniyor..."; container.classList.remove('no-file');
                 try {
-                    await player.loadFile(file);
-                    fileLoaded = true;
-                    statusText.style.display = 'none';
-                    
-                    playPauseBtn.disabled = false;
-                    muteBtn.disabled = false;
-                    speedBtn.disabled = false;
-                    
+                    await player.loadFile(file); fileLoaded = true; statusText.style.display = 'none';
+                    playPauseBtn.disabled = false; muteBtn.disabled = false; speedBtn.disabled = false;
                     togglePlay();
-                } catch (err) {
-                    statusText.textContent = "Hata: " + err.message;
-                    statusText.style.display = 'block';
-                    console.error(err);
-                }
+                } catch (err) { statusText.textContent = "Hata: " + err.message; statusText.style.display = 'block'; console.error(err); }
             });
 
             container.addEventListener('contextmenu', e => e.preventDefault());
 
             function formatTime(time) {
                 if (isNaN(time) || time === Infinity || time < 0) return "0:00";
-                let min = Math.floor(time / 60);
-                let sec = Math.floor(time % 60);
+                let min = Math.floor(time / 60), sec = Math.floor(time % 60);
                 return `${min}:${sec < 10 ? '0' + sec : sec}`;
             }
 
             function showControls() {
-                container.classList.add('show-controls');
-                clearTimeout(hideControlsTimeout);
+                container.classList.add('show-controls'); clearTimeout(hideControlsTimeout);
                 if (player.isPlaying && !speedMenu.classList.contains('active') && !isDragging) {
                     hideControlsTimeout = setTimeout(hideControls, 3000);
                 }
             }
-
-            function hideControls() {
-                if (isDragging) return;
-                container.classList.remove('show-controls');
-                clearTimeout(hideControlsTimeout);
-                speedMenu.classList.remove('active');
-            }
-
-            function showRipple(element) {
-                element.classList.remove('active');
-                void element.offsetWidth;
-                element.classList.add('active');
-            }
+            function hideControls() { if (isDragging) return; container.classList.remove('show-controls'); clearTimeout(hideControlsTimeout); speedMenu.classList.remove('active'); }
+            function showRipple(element) { element.classList.remove('active'); void element.offsetWidth; element.classList.add('active'); }
 
             const startSpeedBoost = (e) => {
                 clearTimeout(holdTimeout);
-                if (e.touches && e.touches.length !== 1) {
-                    endSpeedBoost();
-                    return;
-                }
+                if (e.touches && e.touches.length !== 1) { endSpeedBoost(); return; }
                 if (!player.isReady || !player.isPlaying || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu, .file-input-wrapper')) return;
-                
                 holdTimeout = setTimeout(() => {
-                    originalSpeed = player.playbackSpeed;
-                    player.setSpeed(2.0);
-                    speedBadge.classList.add('active');
-                    container.classList.remove('show-controls');
-                }, 400); 
+                    originalSpeed = player.playbackSpeed; player.setSpeed(2.0);
+                    speedBadge.classList.add('active'); container.classList.remove('show-controls');
+                }, 400);
             };
-
             const endSpeedBoost = () => {
                 clearTimeout(holdTimeout);
-                if (speedBadge.classList.contains('active')) {
-                    player.setSpeed(originalSpeed);
-                    speedBadge.classList.remove('active');
-                    showControls();
-                }
+                if (speedBadge.classList.contains('active')) { player.setSpeed(originalSpeed); speedBadge.classList.remove('active'); showControls(); }
             };
 
-            container.addEventListener('mousedown', (e) => {
-                if (!isTouchDevice) startSpeedBoost(e);
-            });
+            container.addEventListener('mousedown', (e) => { if (!isTouchDevice) startSpeedBoost(e); });
             window.addEventListener('mouseup', endSpeedBoost);
-            
-            container.addEventListener('touchstart', (e) => {
-                isTouchDevice = true;
-                if (e.touches.length === 1) startSpeedBoost(e);
-                else endSpeedBoost();
-            }, {passive: true});
-            
-            window.addEventListener('touchend', endSpeedBoost);
-            window.addEventListener('touchcancel', endSpeedBoost);
+            container.addEventListener('touchstart', (e) => { isTouchDevice = true; if (e.touches.length === 1) startSpeedBoost(e); else endSpeedBoost(); }, {passive: true});
+            window.addEventListener('touchend', endSpeedBoost); window.addEventListener('touchcancel', endSpeedBoost);
 
             container.addEventListener('dblclick', (e) => {
                 if (!player.isReady || e.target.closest('#progress_area, .file-input-wrapper')) return;
-                e.preventDefault();
-                
-                const rect = container.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                
-                if (x < rect.width / 2) {
-                    player.seek(Math.max(0, player.currentTime - 10));
-                    showRipple(rippleLeft);
-                } else {
-                    player.seek(Math.min(player.duration, player.currentTime + 10));
-                    showRipple(rippleRight);
-                }
+                e.preventDefault(); const rect = container.getBoundingClientRect(); const x = e.clientX - rect.left;
+                if (x < rect.width / 2) { player.seek(Math.max(0, player.currentTime - 10)); showRipple(rippleLeft); }
+                else { player.seek(Math.min(player.duration, player.currentTime + 10)); showRipple(rippleRight); }
                 showControls();
             });
 
-            container.addEventListener('mousemove', () => {
-                if (!isTouchDevice) showControls();
-            });
-
+            container.addEventListener('mousemove', () => { if (!isTouchDevice) showControls(); });
             container.addEventListener('click', (e) => {
                 if (e.target === container || e.target === canvas) {
-                    if (!fileLoaded) {
-                        fileInput.click();
-                        return;
-                    }
-                    if (container.classList.contains('show-controls')) hideControls();
-                    else showControls();
+                    if (!fileLoaded) { fileInput.click(); return; }
+                    if (container.classList.contains('show-controls')) hideControls(); else showControls();
                 }
             });
 
@@ -991,144 +633,71 @@
             }
 
             async function togglePlay() {
-                if (!player.isReady) {
-                    if (!fileLoaded) fileInput.click();
-                    return;
-                }
-
-                if (player.isPlaying) {
-                    player.pause();
-                    container.classList.remove('playing');
-                    updatePlayIcon('play');
-                    showControls();
-                } else {
-                    if (player.hasEnded) {
-                        player.seekOffset = 0;
-                        player.hasEnded = false;
-                    }
-                    player.play();
-                    container.classList.add('playing');
-                    container.classList.remove('ended');
-                    updatePlayIcon('pause');
-                    showControls();
+                if (!player.isReady) { if (!fileLoaded) fileInput.click(); return; }
+                if (player.isPlaying) { player.pause(); container.classList.remove('playing'); updatePlayIcon('play'); showControls(); }
+                else {
+                    if (player.hasEnded) { player.seekOffset = 0; player.hasEnded = false; }
+                    player.play(); container.classList.add('playing'); container.classList.remove('ended');
+                    updatePlayIcon('pause'); showControls();
                 }
             }
 
             function updateProgress(clientX) {
                 if (!player.isReady) return;
                 const rect = progressArea.getBoundingClientRect();
-                let pos = (clientX - rect.left) / rect.width;
-                pos = Math.max(0, Math.min(1, pos));
-                lastDragPos = pos;
-                progressBar.style.width = `${pos * 100}%`;
+                let pos = (clientX - rect.left) / rect.width; pos = Math.max(0, Math.min(1, pos));
+                lastDragPos = pos; progressBar.style.width = `${pos * 100}%`;
                 currentTimeEl.innerText = formatTime(pos * player.duration);
             }
-
             function startDragging(e) {
-                if (!player.isReady) return;
-                isDragging = true;
-                clearTimeout(holdTimeout);
+                if (!player.isReady) return; isDragging = true; clearTimeout(holdTimeout);
                 progressArea.classList.add('dragging');
                 const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                updateProgress(clientX);
-                showControls();
+                updateProgress(clientX); showControls();
             }
-
-            function onDragging(e) {
-                if (!isDragging) return;
-                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                updateProgress(clientX);
-            }
-
+            function onDragging(e) { if (!isDragging) return; const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; updateProgress(clientX); }
             function stopDragging() {
-                if (isDragging) {
-                    isDragging = false;
-                    progressArea.classList.remove('dragging');
-                    player.seek(lastDragPos * player.duration);
-                    showControls();
-                }
+                if (isDragging) { isDragging = false; progressArea.classList.remove('dragging'); player.seek(lastDragPos * player.duration); showControls(); }
             }
 
-            progressArea.addEventListener('mousedown', startDragging);
-            window.addEventListener('mousemove', onDragging);
-            window.addEventListener('mouseup', stopDragging);
-
+            progressArea.addEventListener('mousedown', startDragging); window.addEventListener('mousemove', onDragging); window.addEventListener('mouseup', stopDragging);
             progressArea.addEventListener('touchstart', startDragging, { passive: false });
-            window.addEventListener('touchmove', (e) => {
-                if(isDragging) {
-                    e.preventDefault();
-                    onDragging(e);
-                }
-            }, { passive: false });
+            window.addEventListener('touchmove', (e) => { if(isDragging) { e.preventDefault(); onDragging(e); } }, { passive: false });
             window.addEventListener('touchend', stopDragging);
 
             player.onTimeUpdate = (current, duration) => {
-                if (!isDragging) {
-                    progressBar.style.width = `${(current / duration) * 100}%`;
-                    currentTimeEl.innerText = formatTime(current);
-                }
+                if (!isDragging) { progressBar.style.width = `${(current / duration) * 100}%`; currentTimeEl.innerText = formatTime(current); }
                 durationEl.innerText = formatTime(duration);
             };
-
-            player.onReady = (duration) => {
-                durationEl.innerText = formatTime(duration);
-            };
-
-            player.onEnded = () => {
-                container.classList.remove('playing');
-                container.classList.add('ended');
-                updatePlayIcon('rotate-ccw');
-                showControls();
-                endSpeedBoost();
-            };
+            player.onReady = (duration) => { durationEl.innerText = formatTime(duration); };
+            player.onEnded = () => { container.classList.remove('playing'); container.classList.add('ended'); updatePlayIcon('rotate-ccw'); showControls(); endSpeedBoost(); };
 
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
-
-            speedBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                endSpeedBoost();
-                speedMenu.classList.toggle('active');
-            });
-
+            speedBtn.addEventListener('click', (e) => { e.stopPropagation(); endSpeedBoost(); speedMenu.classList.toggle('active'); });
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const speed = parseFloat(item.dataset.speed);
-                    player.setSpeed(speed);
-                    originalSpeed = speed;
-                    speedItems.forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
+                    e.stopPropagation(); const speed = parseFloat(item.dataset.speed);
+                    player.setSpeed(speed); originalSpeed = speed;
+                    speedItems.forEach(i => i.classList.remove('selected')); item.classList.add('selected');
                     speedMenu.classList.remove('active');
                 });
             });
-
             volumeSlider.addEventListener('input', (e) => {
-                const vol = parseFloat(e.target.value);
-                player.setVolume(vol);
-                muteBtn.innerHTML = `<i data-lucide="${vol == 0 ? 'volume-x' : 'volume-2'}"></i>`;
-                refreshIcons();
+                const vol = parseFloat(e.target.value); player.setVolume(vol);
+                muteBtn.innerHTML = `<i data-lucide="${vol == 0 ? 'volume-x' : 'volume-2'}"></i>`; refreshIcons();
             });
-
             muteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const newVol = player.volume > 0 ? 0 : 1;
-                player.setVolume(newVol);
-                volumeSlider.value = newVol;
-                muteBtn.innerHTML = `<i data-lucide="${newVol == 0 ? 'volume-x' : 'volume-2'}"></i>`;
-                refreshIcons();
+                e.stopPropagation(); const newVol = player.volume > 0 ? 0 : 1;
+                player.setVolume(newVol); volumeSlider.value = newVol;
+                muteBtn.innerHTML = `<i data-lucide="${newVol == 0 ? 'volume-x' : 'volume-2'}"></i>`; refreshIcons();
             });
-
             fullscreenBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (!document.fullscreenElement) container.requestFullscreen().catch(() => {});
                 else document.exitFullscreen();
             });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.code === "Space") { e.preventDefault(); togglePlay(); }
-            });
-
+            document.addEventListener('keydown', (e) => { if (e.code === "Space") { e.preventDefault(); togglePlay(); } });
             showControls();
         };
     </script>
