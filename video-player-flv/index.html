@@ -482,7 +482,7 @@
                 this.audioSource = null;
                 this.gainNode = null;
                 
-                this.decodedFrames = [];
+                this.videoTags = [];
                 this.duration = 0;
                 this.isPlaying = false;
                 this.isReady = false;
@@ -490,9 +490,10 @@
                 this.volume = 1;
                 
                 this.seekOffset = 0;
-                this.audioStartTime = 0;
+                this.videoStartTime = 0;
                 this.rafId = null;
-                this.lastFrameIndex = -1;
+                this.videoDecoder = null;
+                this.hasEnded = false;
                 
                 this.onTimeUpdate = null;
                 this.onEnded = null;
@@ -507,21 +508,17 @@
 
             reset() {
                 this.pause();
-                this.decodedFrames.forEach(f => {
-                    try { f.frame.close(); } catch(e) {}
-                });
-                this.decodedFrames = [];
+                this.videoTags = [];
                 this.isReady = false;
                 this.duration = 0;
                 this.seekOffset = 0;
-                this.lastFrameIndex = -1;
+                this.hasEnded = false;
             }
 
             async processFLV(buffer) {
                 const view = new DataView(buffer);
                 let offset = 13;
                 const mp3Chunks = [];
-                const videoChunks = [];
                 let maxTimestamp = 0;
 
                 while (offset < buffer.byteLength) {
@@ -542,7 +539,7 @@
                         if ((vInfo & 0x0F) === 7) {
                             const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
                             const isKeyframe = (vInfo >> 4) === 1;
-                            videoChunks.push({
+                            this.videoTags.push({
                                 type: isKeyframe ? 'key' : 'delta',
                                 timestamp: timestamp * 1000,
                                 data: payload,
@@ -566,64 +563,74 @@
                     this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
                 }
 
-                if (videoChunks.length > 0) {
-                    await this.decodeAllVideo(videoChunks);
-                }
-
                 this.isReady = true;
                 if (this.onReady) this.onReady(this.duration);
             }
 
-            async decodeAllVideo(chunks) {
-                return new Promise((resolve, reject) => {
-                    const tempFrames = [];
-                    const decoder = new VideoDecoder({
-                        output: (frame) => {
-                            tempFrames.push({ timestamp: frame.timestamp, frame: frame.clone() });
+            setupVideoDecoder(startFromIndex) {
+                this.videoDecoder = new VideoDecoder({
+                    output: (frame) => {
+                        const frameTime = frame.timestamp / 1000000;
+                        const relativeTime = (frameTime - this.seekOffset) / this.playbackSpeed;
+                        const scheduledTime = this.videoStartTime + relativeTime * 1000;
+                        const wait = scheduledTime - performance.now();
+                        
+                        setTimeout(() => {
+                            if (!this.isPlaying) return;
+                            this.canvas.width = frame.displayWidth;
+                            this.canvas.height = frame.displayHeight;
+                            this.ctx.drawImage(frame, 0, 0);
                             frame.close();
-                        },
-                        error: (e) => reject(e)
-                    });
-
-                    let config = null;
-                    for (const c of chunks) {
-                        if (c.pType === 0) {
-                            config = { codec: 'avc1.42E01E', description: c.data };
-                            break;
-                        }
-                    }
-
-                    if (!config) {
-                        reject(new Error('No AVCDecoderConfiguration found'));
-                        return;
-                    }
-
-                    decoder.configure(config);
-
-                    for (const c of chunks) {
-                        if (c.pType === 0) continue;
-                        decoder.decode(new EncodedVideoChunk({
-                            type: c.type,
-                            timestamp: c.timestamp,
-                            data: c.data
-                        }));
-                    }
-
-                    decoder.flush().then(() => {
-                        decoder.close();
-                        tempFrames.sort((a, b) => a.timestamp - b.timestamp);
-                        this.decodedFrames = tempFrames;
-                        resolve();
-                    }).catch(reject);
+                        }, Math.max(0, wait));
+                    },
+                    error: (e) => console.error(e)
                 });
+
+                let config = null;
+                for (let i = 0; i < this.videoTags.length; i++) {
+                    if (this.videoTags[i].pType === 0) {
+                        config = { codec: 'avc1.42E01E', description: this.videoTags[i].data };
+                        break;
+                    }
+                }
+
+                if (!config) throw new Error('No AVCDecoderConfiguration found');
+
+                this.videoDecoder.configure(config);
+
+                for (let i = startFromIndex; i < this.videoTags.length; i++) {
+                    const tag = this.videoTags[i];
+                    if (tag.pType === 0) continue;
+                    this.videoDecoder.decode(new EncodedVideoChunk({
+                        type: tag.type,
+                        timestamp: tag.timestamp,
+                        data: tag.data
+                    }));
+                }
             }
 
             play() {
                 if (!this.isReady || this.isPlaying) return;
-                if (this.seekOffset >= this.duration - 0.1) this.seekOffset = 0;
+                
+                // Eğer video bitmişse veya sona çok yakınsa, baştan başlat
+                if (this.hasEnded || this.seekOffset >= this.duration - 0.2) {
+                    this.seekOffset = 0;
+                    this.hasEnded = false;
+                }
 
                 this.isPlaying = true;
-                this.lastFrameIndex = -1;
+                this.videoStartTime = performance.now();
+
+                let startIndex = 0;
+                if (this.seekOffset > 0) {
+                    for (let i = this.videoTags.length - 1; i >= 0; i--) {
+                        if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                }
+                this.setupVideoDecoder(startIndex);
 
                 if (this.audioBuffer && this.audioCtx) {
                     this.audioSource = this.audioCtx.createBufferSource();
@@ -633,108 +640,80 @@
                     this.audioSource.connect(this.gainNode);
                     this.gainNode.connect(this.audioCtx.destination);
                     this.audioSource.playbackRate.value = this.playbackSpeed;
+                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
                     
-                    if (this.audioCtx.state === 'suspended') {
-                        this.audioCtx.resume();
-                    }
-
-                    this.audioStartTime = this.audioCtx.currentTime - (this.seekOffset / this.playbackSpeed);
                     this.audioSource.start(0, this.seekOffset);
                     
                     this.audioSource.onended = () => {
                         if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
                             this.pause();
+                            this.hasEnded = true;
                             if (this.onEnded) this.onEnded();
                         }
                     };
-                } else {
-                    this.audioStartTime = performance.now() / 1000 - (this.seekOffset / this.playbackSpeed);
                 }
 
-                this.renderLoop();
+                this.timeLoop();
             }
 
             pause() {
                 if (!this.isPlaying) return;
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
+                if (this.videoDecoder) {
+                    try { this.videoDecoder.close(); } catch(e) {}
+                    this.videoDecoder = null;
+                }
                 if (this.audioSource) {
                     try { this.audioSource.stop(); } catch(e) {}
                     this.audioSource = null;
                 }
-                this.seekOffset = this.currentTime;
             }
 
             seek(time) {
                 const wasPlaying = this.isPlaying;
                 this.pause();
                 this.seekOffset = Math.max(0, Math.min(time, this.duration));
-                this.lastFrameIndex = -1;
-                this.renderFrameAt(this.seekOffset);
-                if (wasPlaying) this.play();
-            }
-
-            renderFrameAt(timeSec) {
-                if (this.decodedFrames.length === 0) return;
-                const targetTs = timeSec * 1000000;
-                let idx = -1;
-                
-                for (let i = this.decodedFrames.length - 1; i >= 0; i--) {
-                    if (this.decodedFrames[i].timestamp <= targetTs) {
-                        idx = i;
-                        break;
-                    }
-                }
-
-                if (idx !== -1 && idx !== this.lastFrameIndex) {
-                    const f = this.decodedFrames[idx];
-                    this.canvas.width = f.frame.displayWidth;
-                    this.canvas.height = f.frame.displayHeight;
-                    this.ctx.drawImage(f.frame, 0, 0);
-                    this.lastFrameIndex = idx;
+                this.hasEnded = false;
+                if (wasPlaying) {
+                    setTimeout(() => this.play(), 50);
                 }
             }
 
-            renderLoop() {
+            timeLoop() {
                 if (!this.isPlaying) return;
-                
                 const current = this.currentTime;
-                
+                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
                 if (current >= this.duration) {
-                    this.renderFrameAt(this.duration);
-                    if (this.onTimeUpdate) this.onTimeUpdate(this.duration, this.duration);
                     this.pause();
+                    this.hasEnded = true;
                     if (this.onEnded) this.onEnded();
                     return;
                 }
-
-                this.renderFrameAt(current);
-                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
-                
-                this.rafId = requestAnimationFrame(() => this.renderLoop());
-            }
-
-            get currentTime() {
-                if (!this.isPlaying) return this.seekOffset;
-                if (this.audioCtx) {
-                    return (this.audioCtx.currentTime - this.audioStartTime) * this.playbackSpeed;
-                }
-                return (performance.now() / 1000 - this.audioStartTime) * this.playbackSpeed;
+                this.rafId = requestAnimationFrame(() => this.timeLoop());
             }
 
             setSpeed(speed) {
+                const wasPlaying = this.isPlaying;
                 const current = this.currentTime;
                 this.playbackSpeed = speed;
-                if (this.isPlaying) {
+                if (wasPlaying) {
                     this.pause();
                     this.seekOffset = current;
-                    this.play();
+                    this.hasEnded = false;
+                    setTimeout(() => this.play(), 50);
                 }
             }
 
             setVolume(vol) {
                 this.volume = vol;
                 if (this.gainNode) this.gainNode.gain.value = vol;
+            }
+
+            get currentTime() {
+                if (!this.isPlaying) return this.seekOffset;
+                const elapsed = (performance.now() - this.videoStartTime) / 1000;
+                return this.seekOffset + (elapsed * this.playbackSpeed);
             }
         }
 
@@ -919,6 +898,11 @@
                     updatePlayIcon('play');
                     showControls();
                 } else {
+                    // Eğer video bitmişse, seekOffset'i sıfırla
+                    if (player.hasEnded) {
+                        player.seekOffset = 0;
+                        player.hasEnded = false;
+                    }
                     player.play();
                     container.classList.add('playing');
                     container.classList.remove('ended');
