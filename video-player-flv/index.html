@@ -482,6 +482,9 @@
                 this.audioSource = null;
                 this.gainNode = null;
                 
+                this.audioElement = null;
+                this.audioBlobUrl = null;
+                
                 this.videoTags = [];
                 this.duration = 0;
                 this.isPlaying = false;
@@ -513,6 +516,15 @@
                 this.duration = 0;
                 this.seekOffset = 0;
                 this.hasEnded = false;
+                
+                if (this.audioBlobUrl) {
+                    URL.revokeObjectURL(this.audioBlobUrl);
+                    this.audioBlobUrl = null;
+                }
+                if (this.audioElement) {
+                    this.audioElement.src = '';
+                    this.audioElement = null;
+                }
             }
 
             async processFLV(buffer) {
@@ -542,7 +554,7 @@
                             this.videoTags.push({
                                 type: isKeyframe ? 'key' : 'delta',
                                 timestamp: timestamp * 1000,
-                                data: payload,
+                                 payload,
                                 pType,
                                 tsSec: timestamp / 1000
                             });
@@ -604,8 +616,80 @@
                     this.videoDecoder.decode(new EncodedVideoChunk({
                         type: tag.type,
                         timestamp: tag.timestamp,
-                        data: tag.data
+                         tag.data
                     }));
+                }
+            }
+
+            audioBufferToWav(buffer) {
+                const numChannels = buffer.numberOfChannels;
+                const sampleRate = buffer.sampleRate;
+                const format = 1;
+                const bitDepth = 16;
+                
+                let result;
+                if (numChannels === 2) {
+                    result = this.interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+                } else {
+                    result = buffer.getChannelData(0);
+                }
+                
+                return this.encodeWAV(result, numChannels, sampleRate, format, bitDepth);
+            }
+
+            interleave(inputL, inputR) {
+                const length = inputL.length + inputR.length;
+                const result = new Float32Array(length);
+                let index = 0, inputIndex = 0;
+                while (index < length) {
+                    result[index++] = inputL[inputIndex];
+                    result[index++] = inputR[inputIndex];
+                    inputIndex++;
+                }
+                return result;
+            }
+
+            encodeWAV(samples, numChannels, sampleRate, format, bitDepth) {
+                const bytesPerSample = bitDepth / 8;
+                const blockAlign = numChannels * bytesPerSample;
+                const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+                const view = new DataView(buffer);
+                
+                this.writeString(view, 0, 'RIFF');
+                view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+                this.writeString(view, 8, 'WAVE');
+                this.writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, format, true);
+                view.setUint16(22, numChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * blockAlign, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitDepth, true);
+                this.writeString(view, 36, 'data');
+                view.setUint32(40, samples.length * bytesPerSample, true);
+                
+                this.floatTo16BitPCM(view, 44, samples, bitDepth);
+                return new Blob([view], { type: 'audio/wav' });
+            }
+
+            writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            floatTo16BitPCM(view, offset, input, bitDepth) {
+                if (bitDepth === 16) {
+                    for (let i = 0; i < input.length; i++, offset += 2) {
+                        let s = Math.max(-1, Math.min(1, input[i]));
+                        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                    }
+                } else {
+                    for (let i = 0; i < input.length; i++, offset += 1) {
+                        let s = Math.max(-1, Math.min(1, input[i]));
+                        view.setInt8(offset, s < 0 ? s * 0x80 : s * 0x7F);
+                    }
                 }
             }
 
@@ -632,18 +716,29 @@
                 this.setupVideoDecoder(startIndex);
 
                 if (this.audioBuffer && this.audioCtx) {
-                    this.audioSource = this.audioCtx.createBufferSource();
-                    this.audioSource.buffer = this.audioBuffer;
-                    this.gainNode = this.audioCtx.createGain();
-                    this.gainNode.gain.value = this.volume;
-                    this.audioSource.connect(this.gainNode);
-                    this.gainNode.connect(this.audioCtx.destination);
-                    this.audioSource.playbackRate.value = this.playbackSpeed;
-                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+                    if (!this.audioElement) {
+                        this.audioElement = new Audio();
+                        this.audioElement.preservesPitch = true;
+                        this.audioElement.mozPreservesPitch = true;
+                        this.audioElement.webkitPreservesPitch = true;
+                        
+                        const wavBlob = this.audioBufferToWav(this.audioBuffer);
+                        this.audioBlobUrl = URL.createObjectURL(wavBlob);
+                        this.audioElement.src = this.audioBlobUrl;
+                        this.audioElement.preload = 'auto';
+                    }
                     
-                    this.audioSource.start(0, this.seekOffset);
+                    this.audioElement.volume = this.volume;
+                    this.audioElement.playbackRate = this.playbackSpeed;
+                    this.audioElement.currentTime = this.seekOffset;
                     
-                    this.audioSource.onended = () => {
+                    if (this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume();
+                    }
+                    
+                    this.audioElement.play().catch(e => console.error('Audio play error:', e));
+                    
+                    this.audioElement.onended = () => {
                         if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
                             this.pause();
                             this.hasEnded = true;
@@ -658,7 +753,7 @@
             pause() {
                 if (!this.isPlaying) return;
                 
-                // ✅ TEK EKLEME: Durdururken mevcut konumu kaydet
+                // 🔧 KRİTİK DÜZELTME: Durdurma anındaki gerçek konumu kaydet
                 this.seekOffset = this.currentTime;
                 
                 this.isPlaying = false;
@@ -667,6 +762,11 @@
                     try { this.videoDecoder.close(); } catch(e) {}
                     this.videoDecoder = null;
                 }
+                
+                if (this.audioElement) {
+                    this.audioElement.pause();
+                }
+                
                 if (this.audioSource) {
                     try { this.audioSource.stop(); } catch(e) {}
                     this.audioSource = null;
@@ -711,6 +811,7 @@
             setVolume(vol) {
                 this.volume = vol;
                 if (this.gainNode) this.gainNode.gain.value = vol;
+                if (this.audioElement) this.audioElement.volume = vol;
             }
 
             get currentTime() {
