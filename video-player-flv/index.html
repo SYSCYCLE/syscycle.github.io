@@ -482,6 +482,7 @@
                 this.audioSource = null;
                 this.gainNode = null;
                 
+                // 🎵 Pitch koruma için yeni özellikler
                 this.audioElement = null;
                 this.audioBlobUrl = null;
                 
@@ -517,6 +518,7 @@
                 this.seekOffset = 0;
                 this.hasEnded = false;
                 
+                // 🧹 Bellek temizliği
                 if (this.audioBlobUrl) {
                     URL.revokeObjectURL(this.audioBlobUrl);
                     this.audioBlobUrl = null;
@@ -621,6 +623,7 @@
                 }
             }
 
+            // 🎵 AudioBuffer'ı WAV'e çeviren yardımcı fonksiyonlar
             audioBufferToWav(buffer) {
                 const numChannels = buffer.numberOfChannels;
                 const sampleRate = buffer.sampleRate;
@@ -715,9 +718,11 @@
                 }
                 this.setupVideoDecoder(startIndex);
 
+                // 🎵 Pitch korumalı ses oynatma (HTML5 Audio + preservesPitch)
                 if (this.audioBuffer && this.audioCtx) {
                     if (!this.audioElement) {
                         this.audioElement = new Audio();
+                        // ✅ Pitch koruma ayarları (tüm tarayıcılar için)
                         this.audioElement.preservesPitch = true;
                         this.audioElement.mozPreservesPitch = true;
                         this.audioElement.webkitPreservesPitch = true;
@@ -752,10 +757,6 @@
 
             pause() {
                 if (!this.isPlaying) return;
-                
-                // 🔧 KRİTİK DÜZELTME: Durdurma anındaki gerçek konumu kaydet
-                this.seekOffset = this.currentTime;
-                
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
                 if (this.videoDecoder) {
@@ -763,6 +764,7 @@
                     this.videoDecoder = null;
                 }
                 
+                // 🎵 HTML5 Audio'yu durdur
                 if (this.audioElement) {
                     this.audioElement.pause();
                 }
