@@ -52,6 +52,21 @@
             -webkit-touch-callout: none;
         }
 
+        .video-container:fullscreen {
+            max-width: 100vw;
+            max-height: 100vh;
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            aspect-ratio: auto;
+        }
+
+        .video-container:fullscreen canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
         canvas {
             max-width: 100%;
             max-height: 100%;
@@ -378,7 +393,6 @@
             fill: none;
         }
     </style>
-<base target="_blank">
 </head>
 <body oncontextmenu="return false;">
 
@@ -464,12 +478,11 @@
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.audioCtx = null;
-                this.videoDecoder = null;
                 this.audioBuffer = null;
                 this.audioSource = null;
                 this.gainNode = null;
                 
-                this.videoTags = [];
+                this.decodedFrames = [];
                 this.duration = 0;
                 this.isPlaying = false;
                 this.isReady = false;
@@ -477,9 +490,9 @@
                 this.volume = 1;
                 
                 this.seekOffset = 0;
-                this.playStartTime = 0;
-                this.videoStartTime = 0;
+                this.audioStartTime = 0;
                 this.rafId = null;
+                this.lastFrameIndex = -1;
                 
                 this.onTimeUpdate = null;
                 this.onEnded = null;
@@ -494,16 +507,21 @@
 
             reset() {
                 this.pause();
-                this.videoTags = [];
+                this.decodedFrames.forEach(f => {
+                    try { f.frame.close(); } catch(e) {}
+                });
+                this.decodedFrames = [];
                 this.isReady = false;
                 this.duration = 0;
                 this.seekOffset = 0;
+                this.lastFrameIndex = -1;
             }
 
             async processFLV(buffer) {
                 const view = new DataView(buffer);
                 let offset = 13;
                 const mp3Chunks = [];
+                const videoChunks = [];
                 let maxTimestamp = 0;
 
                 while (offset < buffer.byteLength) {
@@ -524,7 +542,7 @@
                         if ((vInfo & 0x0F) === 7) {
                             const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
                             const isKeyframe = (vInfo >> 4) === 1;
-                            this.videoTags.push({
+                            videoChunks.push({
                                 type: isKeyframe ? 'key' : 'delta',
                                 timestamp: timestamp * 1000,
                                 data: payload,
@@ -548,47 +566,56 @@
                     this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
                 }
 
+                if (videoChunks.length > 0) {
+                    await this.decodeAllVideo(videoChunks);
+                }
+
                 this.isReady = true;
                 if (this.onReady) this.onReady(this.duration);
             }
 
-            setupVideoDecoder(startFromIndex) {
-                this.videoDecoder = new VideoDecoder({
-                    output: (frame) => {
-                        const relativeTime = (frame.timestamp / 1000000 - this.seekOffset) / this.playbackSpeed;
-                        const wait = (this.videoStartTime + relativeTime * 1000) - performance.now();
-                        setTimeout(() => {
-                            if (!this.isPlaying) return;
-                            this.canvas.width = frame.displayWidth;
-                            this.canvas.height = frame.displayHeight;
-                            this.ctx.drawImage(frame, 0, 0);
+            async decodeAllVideo(chunks) {
+                return new Promise((resolve, reject) => {
+                    const tempFrames = [];
+                    const decoder = new VideoDecoder({
+                        output: (frame) => {
+                            tempFrames.push({ timestamp: frame.timestamp, frame: frame.clone() });
                             frame.close();
-                        }, Math.max(0, wait));
-                    },
-                    error: (e) => console.error(e)
-                });
+                        },
+                        error: (e) => reject(e)
+                    });
 
-                let config = null;
-                for (let i = 0; i < this.videoTags.length; i++) {
-                    if (this.videoTags[i].pType === 0) {
-                        config = { codec: 'avc1.42E01E', description: this.videoTags[i].data };
-                        break;
+                    let config = null;
+                    for (const c of chunks) {
+                        if (c.pType === 0) {
+                            config = { codec: 'avc1.42E01E', description: c.data };
+                            break;
+                        }
                     }
-                }
 
-                if (!config) throw new Error('No AVCDecoderConfiguration found');
+                    if (!config) {
+                        reject(new Error('No AVCDecoderConfiguration found'));
+                        return;
+                    }
 
-                this.videoDecoder.configure(config);
+                    decoder.configure(config);
 
-                for (let i = startFromIndex; i < this.videoTags.length; i++) {
-                    const tag = this.videoTags[i];
-                    if (tag.pType === 0) continue;
-                    this.videoDecoder.decode(new EncodedVideoChunk({
-                        type: tag.type,
-                        timestamp: tag.timestamp,
-                        data: tag.data
-                    }));
-                }
+                    for (const c of chunks) {
+                        if (c.pType === 0) continue;
+                        decoder.decode(new EncodedVideoChunk({
+                            type: c.type,
+                            timestamp: c.timestamp,
+                            data: c.data
+                        }));
+                    }
+
+                    decoder.flush().then(() => {
+                        decoder.close();
+                        tempFrames.sort((a, b) => a.timestamp - b.timestamp);
+                        this.decodedFrames = tempFrames;
+                        resolve();
+                    }).catch(reject);
+                });
             }
 
             play() {
@@ -596,20 +623,7 @@
                 if (this.seekOffset >= this.duration - 0.1) this.seekOffset = 0;
 
                 this.isPlaying = true;
-                const now = performance.now();
-                this.playStartTime = now;
-                this.videoStartTime = now;
-
-                let startIndex = 0;
-                if (this.seekOffset > 0) {
-                    for (let i = this.videoTags.length - 1; i >= 0; i--) {
-                        if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') {
-                            startIndex = i;
-                            break;
-                        }
-                    }
-                }
-                this.setupVideoDecoder(startIndex);
+                this.lastFrameIndex = -1;
 
                 if (this.audioBuffer && this.audioCtx) {
                     this.audioSource = this.audioCtx.createBufferSource();
@@ -619,73 +633,108 @@
                     this.audioSource.connect(this.gainNode);
                     this.gainNode.connect(this.audioCtx.destination);
                     this.audioSource.playbackRate.value = this.playbackSpeed;
-                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+                    
+                    if (this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume();
+                    }
+
+                    this.audioStartTime = this.audioCtx.currentTime - (this.seekOffset / this.playbackSpeed);
                     this.audioSource.start(0, this.seekOffset);
+                    
                     this.audioSource.onended = () => {
-                        if (this.isPlaying) {
+                        if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
                             this.pause();
                             if (this.onEnded) this.onEnded();
                         }
                     };
+                } else {
+                    this.audioStartTime = performance.now() / 1000 - (this.seekOffset / this.playbackSpeed);
                 }
 
-                this.timeLoop();
+                this.renderLoop();
             }
 
             pause() {
-                if (this.isPlaying) {
-                    const elapsed = (performance.now() - this.playStartTime) / 1000;
-                    this.seekOffset += elapsed * this.playbackSpeed;
-                }
+                if (!this.isPlaying) return;
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
-                if (this.videoDecoder) {
-                    try { this.videoDecoder.close(); } catch(e) {}
-                    this.videoDecoder = null;
-                }
                 if (this.audioSource) {
                     try { this.audioSource.stop(); } catch(e) {}
                     this.audioSource = null;
                 }
+                this.seekOffset = this.currentTime;
             }
 
             seek(time) {
                 const wasPlaying = this.isPlaying;
                 this.pause();
                 this.seekOffset = Math.max(0, Math.min(time, this.duration));
+                this.lastFrameIndex = -1;
+                this.renderFrameAt(this.seekOffset);
                 if (wasPlaying) this.play();
             }
 
-            timeLoop() {
+            renderFrameAt(timeSec) {
+                if (this.decodedFrames.length === 0) return;
+                const targetTs = timeSec * 1000000;
+                let idx = -1;
+                
+                for (let i = this.decodedFrames.length - 1; i >= 0; i--) {
+                    if (this.decodedFrames[i].timestamp <= targetTs) {
+                        idx = i;
+                        break;
+                    }
+                }
+
+                if (idx !== -1 && idx !== this.lastFrameIndex) {
+                    const f = this.decodedFrames[idx];
+                    this.canvas.width = f.frame.displayWidth;
+                    this.canvas.height = f.frame.displayHeight;
+                    this.ctx.drawImage(f.frame, 0, 0);
+                    this.lastFrameIndex = idx;
+                }
+            }
+
+            renderLoop() {
                 if (!this.isPlaying) return;
+                
                 const current = this.currentTime;
-                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
+                
                 if (current >= this.duration) {
+                    this.renderFrameAt(this.duration);
+                    if (this.onTimeUpdate) this.onTimeUpdate(this.duration, this.duration);
                     this.pause();
                     if (this.onEnded) this.onEnded();
                     return;
                 }
-                this.rafId = requestAnimationFrame(() => this.timeLoop());
+
+                this.renderFrameAt(current);
+                if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
+                
+                this.rafId = requestAnimationFrame(() => this.renderLoop());
+            }
+
+            get currentTime() {
+                if (!this.isPlaying) return this.seekOffset;
+                if (this.audioCtx) {
+                    return (this.audioCtx.currentTime - this.audioStartTime) * this.playbackSpeed;
+                }
+                return (performance.now() / 1000 - this.audioStartTime) * this.playbackSpeed;
             }
 
             setSpeed(speed) {
-                const wasPlaying = this.isPlaying;
                 const current = this.currentTime;
                 this.playbackSpeed = speed;
-                if (wasPlaying) this.seek(current);
+                if (this.isPlaying) {
+                    this.pause();
+                    this.seekOffset = current;
+                    this.play();
+                }
             }
 
             setVolume(vol) {
                 this.volume = vol;
                 if (this.gainNode) this.gainNode.gain.value = vol;
-            }
-
-            get currentTime() {
-                if (this.isPlaying) {
-                    const elapsed = (performance.now() - this.playStartTime) / 1000;
-                    return this.seekOffset + (elapsed * this.playbackSpeed);
-                }
-                return this.seekOffset;
             }
         }
 
@@ -730,15 +779,19 @@
             fileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
+                
                 statusText.textContent = "Yükleniyor...";
                 container.classList.remove('no-file');
+                
                 try {
                     await player.loadFile(file);
                     fileLoaded = true;
                     statusText.style.display = 'none';
+                    
                     playPauseBtn.disabled = false;
                     muteBtn.disabled = false;
                     speedBtn.disabled = false;
+                    
                     togglePlay();
                 } catch (err) {
                     statusText.textContent = "Hata: " + err.message;
@@ -779,14 +832,18 @@
 
             const startSpeedBoost = (e) => {
                 clearTimeout(holdTimeout);
-                if (e.touches && e.touches.length !== 1) { endSpeedBoost(); return; }
+                if (e.touches && e.touches.length !== 1) {
+                    endSpeedBoost();
+                    return;
+                }
                 if (!player.isReady || !player.isPlaying || isDragging || e.target.closest('#progress_area, .control-btn, .speed-menu, .file-input-wrapper')) return;
+                
                 holdTimeout = setTimeout(() => {
                     originalSpeed = player.playbackSpeed;
                     player.setSpeed(2.0);
                     speedBadge.classList.add('active');
                     container.classList.remove('show-controls');
-                }, 400);
+                }, 400); 
             };
 
             const endSpeedBoost = () => {
@@ -798,17 +855,27 @@
                 }
             };
 
-            container.addEventListener('mousedown', (e) => { if (!isTouchDevice) startSpeedBoost(e); });
+            container.addEventListener('mousedown', (e) => {
+                if (!isTouchDevice) startSpeedBoost(e);
+            });
             window.addEventListener('mouseup', endSpeedBoost);
-            container.addEventListener('touchstart', (e) => { isTouchDevice = true; if (e.touches.length === 1) startSpeedBoost(e); else endSpeedBoost(); }, {passive: true});
+            
+            container.addEventListener('touchstart', (e) => {
+                isTouchDevice = true;
+                if (e.touches.length === 1) startSpeedBoost(e);
+                else endSpeedBoost();
+            }, {passive: true});
+            
             window.addEventListener('touchend', endSpeedBoost);
             window.addEventListener('touchcancel', endSpeedBoost);
 
             container.addEventListener('dblclick', (e) => {
                 if (!player.isReady || e.target.closest('#progress_area, .file-input-wrapper')) return;
                 e.preventDefault();
+                
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
+                
                 if (x < rect.width / 2) {
                     player.seek(Math.max(0, player.currentTime - 10));
                     showRipple(rippleLeft);
@@ -819,11 +886,16 @@
                 showControls();
             });
 
-            container.addEventListener('mousemove', () => { if (!isTouchDevice) showControls(); });
+            container.addEventListener('mousemove', () => {
+                if (!isTouchDevice) showControls();
+            });
 
             container.addEventListener('click', (e) => {
                 if (e.target === container || e.target === canvas) {
-                    if (!fileLoaded) { fileInput.click(); return; }
+                    if (!fileLoaded) {
+                        fileInput.click();
+                        return;
+                    }
                     if (container.classList.contains('show-controls')) hideControls();
                     else showControls();
                 }
@@ -836,7 +908,11 @@
             }
 
             async function togglePlay() {
-                if (!player.isReady) { if (!fileLoaded) fileInput.click(); return; }
+                if (!player.isReady) {
+                    if (!fileLoaded) fileInput.click();
+                    return;
+                }
+
                 if (player.isPlaying) {
                     player.pause();
                     container.classList.remove('playing');
@@ -889,8 +965,14 @@
             progressArea.addEventListener('mousedown', startDragging);
             window.addEventListener('mousemove', onDragging);
             window.addEventListener('mouseup', stopDragging);
+
             progressArea.addEventListener('touchstart', startDragging, { passive: false });
-            window.addEventListener('touchmove', (e) => { if(isDragging) { e.preventDefault(); onDragging(e); } }, { passive: false });
+            window.addEventListener('touchmove', (e) => {
+                if(isDragging) {
+                    e.preventDefault();
+                    onDragging(e);
+                }
+            }, { passive: false });
             window.addEventListener('touchend', stopDragging);
 
             player.onTimeUpdate = (current, duration) => {
@@ -901,7 +983,9 @@
                 durationEl.innerText = formatTime(duration);
             };
 
-            player.onReady = (duration) => { durationEl.innerText = formatTime(duration); };
+            player.onReady = (duration) => {
+                durationEl.innerText = formatTime(duration);
+            };
 
             player.onEnded = () => {
                 container.classList.remove('playing');
@@ -914,7 +998,11 @@
             playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
             overlayBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
 
-            speedBtn.addEventListener('click', (e) => { e.stopPropagation(); endSpeedBoost(); speedMenu.classList.toggle('active'); });
+            speedBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                endSpeedBoost();
+                speedMenu.classList.toggle('active');
+            });
 
             speedItems.forEach(item => {
                 item.addEventListener('click', (e) => {
@@ -950,7 +1038,9 @@
                 else document.exitFullscreen();
             });
 
-            document.addEventListener('keydown', (e) => { if (e.code === "Space") { e.preventDefault(); togglePlay(); } });
+            document.addEventListener('keydown', (e) => {
+                if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+            });
 
             showControls();
         };
