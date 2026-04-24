@@ -478,7 +478,8 @@
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.audioCtx = null;
-                this.audioBuffer = null;
+                this.audioElement = null;
+                this.audioBlobUrl = null;
                 this.audioSource = null;
                 this.gainNode = null;
                 
@@ -508,6 +509,24 @@
 
             reset() {
                 this.pause();
+                if (this.audioElement) {
+                    this.audioElement.pause();
+                    this.audioElement.src = '';
+                    this.audioElement.onended = null;
+                    this.audioElement = null;
+                }
+                if (this.audioBlobUrl) {
+                    URL.revokeObjectURL(this.audioBlobUrl);
+                    this.audioBlobUrl = null;
+                }
+                if (this.audioSource) {
+                    try { this.audioSource.disconnect(); } catch(e) {}
+                    this.audioSource = null;
+                }
+                if (this.gainNode) {
+                    try { this.gainNode.disconnect(); } catch(e) {}
+                    this.gainNode = null;
+                }
                 this.videoTags = [];
                 this.isReady = false;
                 this.duration = 0;
@@ -556,11 +575,15 @@
 
                 if (mp3Chunks.length > 0) {
                     const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
-                    const audioArrayBuffer = await fullAudioBlob.arrayBuffer();
+                    this.audioBlobUrl = URL.createObjectURL(fullAudioBlob);
+                    this.audioElement = new Audio();
+                    this.audioElement.src = this.audioBlobUrl;
+                    this.audioElement.preservesPitch = true;
+                    this.audioElement.mozPreservesPitch = true;
+                    this.audioElement.webkitPreservesPitch = true;
                     if (!this.audioCtx) {
                         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     }
-                    this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
                 }
 
                 this.isReady = true;
@@ -612,7 +635,6 @@
             play() {
                 if (!this.isReady || this.isPlaying) return;
                 
-                // Eğer video bitmişse veya sona çok yakınsa, baştan başlat
                 if (this.hasEnded || this.seekOffset >= this.duration - 0.2) {
                     this.seekOffset = 0;
                     this.hasEnded = false;
@@ -632,19 +654,27 @@
                 }
                 this.setupVideoDecoder(startIndex);
 
-                if (this.audioBuffer && this.audioCtx) {
-                    this.audioSource = this.audioCtx.createBufferSource();
-                    this.audioSource.buffer = this.audioBuffer;
-                    this.gainNode = this.audioCtx.createGain();
+                if (this.audioElement && this.audioCtx) {
+                    if (!this.gainNode) {
+                        this.gainNode = this.audioCtx.createGain();
+                        this.gainNode.connect(this.audioCtx.destination);
+                    }
+                    if (!this.audioSource) {
+                        this.audioSource = this.audioCtx.createMediaElementSource(this.audioElement);
+                        this.audioSource.connect(this.gainNode);
+                    }
                     this.gainNode.gain.value = this.volume;
-                    this.audioSource.connect(this.gainNode);
-                    this.gainNode.connect(this.audioCtx.destination);
-                    this.audioSource.playbackRate.value = this.playbackSpeed;
+                    this.audioElement.playbackRate = this.playbackSpeed;
+                    this.audioElement.preservesPitch = true;
+                    this.audioElement.mozPreservesPitch = true;
+                    this.audioElement.webkitPreservesPitch = true;
+                    this.audioElement.currentTime = this.seekOffset;
                     if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
                     
-                    this.audioSource.start(0, this.seekOffset);
+                    const playPromise = this.audioElement.play();
+                    if (playPromise) playPromise.catch(() => {});
                     
-                    this.audioSource.onended = () => {
+                    this.audioElement.onended = () => {
                         if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
                             this.pause();
                             this.hasEnded = true;
@@ -658,15 +688,15 @@
 
             pause() {
                 if (!this.isPlaying) return;
+                this.seekOffset = this.currentTime;
                 this.isPlaying = false;
                 if (this.rafId) cancelAnimationFrame(this.rafId);
                 if (this.videoDecoder) {
                     try { this.videoDecoder.close(); } catch(e) {}
                     this.videoDecoder = null;
                 }
-                if (this.audioSource) {
-                    try { this.audioSource.stop(); } catch(e) {}
-                    this.audioSource = null;
+                if (this.audioElement) {
+                    this.audioElement.pause();
                 }
             }
 
@@ -675,8 +705,11 @@
                 this.pause();
                 this.seekOffset = Math.max(0, Math.min(time, this.duration));
                 this.hasEnded = false;
+                if (this.audioElement) {
+                    this.audioElement.currentTime = this.seekOffset;
+                }
                 if (wasPlaying) {
-                    setTimeout(() => this.play(), 50);
+                    this.play();
                 }
             }
 
@@ -697,11 +730,17 @@
                 const wasPlaying = this.isPlaying;
                 const current = this.currentTime;
                 this.playbackSpeed = speed;
+                if (this.audioElement) {
+                    this.audioElement.playbackRate = speed;
+                    this.audioElement.preservesPitch = true;
+                    this.audioElement.mozPreservesPitch = true;
+                    this.audioElement.webkitPreservesPitch = true;
+                }
                 if (wasPlaying) {
                     this.pause();
                     this.seekOffset = current;
                     this.hasEnded = false;
-                    setTimeout(() => this.play(), 50);
+                    this.play();
                 }
             }
 
@@ -747,6 +786,7 @@
             let originalSpeed = 1;
             let fileLoaded = false;
             let lastDragPos = 0;
+            let preventNextClick = false;
 
             refreshIcons();
 
@@ -831,6 +871,8 @@
                     player.setSpeed(originalSpeed);
                     speedBadge.classList.remove('active');
                     showControls();
+                    preventNextClick = true;
+                    setTimeout(() => preventNextClick = false, 350);
                 }
             };
 
@@ -870,6 +912,7 @@
             });
 
             container.addEventListener('click', (e) => {
+                if (preventNextClick) return;
                 if (e.target === container || e.target === canvas) {
                     if (!fileLoaded) {
                         fileInput.click();
@@ -898,7 +941,6 @@
                     updatePlayIcon('play');
                     showControls();
                 } else {
-                    // Eğer video bitmişse, seekOffset'i sıfırla
                     if (player.hasEnded) {
                         player.seekOffset = 0;
                         player.hasEnded = false;
