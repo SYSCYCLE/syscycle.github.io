@@ -497,11 +497,11 @@
                 this.hasEnded = false;
                 this.timeLoopTimeout = null;
                 
-                // Yeni: Akıcı oynatma için kare kuyruğu ve kontrol değişkenleri
                 this.frameQueue = [];
                 this.decodeIndex = 0;
                 this.lastCanvasWidth = 0;
                 this.lastCanvasHeight = 0;
+                this._decodePending = false;
                 
                 this.onTimeUpdate = null;
                 this.onEnded = null;
@@ -543,6 +543,7 @@
                 this.decodeIndex = 0;
                 this.lastCanvasWidth = 0;
                 this.lastCanvasHeight = 0;
+                this._decodePending = false;
             }
 
             async processFLV(buffer) {
@@ -555,7 +556,6 @@
                     if (offset + 11 > buffer.byteLength) break;
                     const tagType = view.getUint8(offset);
                     const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
-                    // UNSIGNED timestamp düzeltmesi (işaret biti genişlemesini engelle)
                     const timestamp = ((view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24)) >>> 0;
                     const dOffset = offset + 11;
 
@@ -572,7 +572,7 @@
                             const isKeyframe = (vInfo >> 4) === 1;
                             this.videoTags.push({
                                 type: isKeyframe ? 'key' : 'delta',
-                                timestamp: timestamp * 1000, // mikrosaniye
+                                timestamp: timestamp * 1000,
                                 data: payload,
                                 pType,
                                 tsSec: timestamp / 1000
@@ -609,9 +609,21 @@
                 
                 this.videoDecoder = new VideoDecoder({
                     output: (frame) => {
+                        // Bellek şişmesini önle: queue 8'den fazlaysa eskiyi at
+                        while (this.frameQueue.length > 8) {
+                            const old = this.frameQueue.shift();
+                            try { old.close(); } catch(e) {}
+                        }
                         this.frameQueue.push(frame);
-                        // Yeni kare gelince decode'e devam et
-                        this.decodeMore();
+                        
+                        // Senkron zincirlemeyi kır: asenkron schedule et
+                        if (!this._decodePending) {
+                            this._decodePending = true;
+                            queueMicrotask(() => {
+                                this._decodePending = false;
+                                this.decodeMore();
+                            });
+                        }
                     },
                     error: (e) => console.error('VideoDecoder error:', e)
                 });
@@ -628,13 +640,15 @@
                 this.videoDecoder.configure(config);
             }
 
-            // Decoder'ı aşırı yüklemeden kontrollü decode
             decodeMore() {
                 if (!this.videoDecoder || this.videoDecoder.state !== 'configured') return;
                 
-                while (this.decodeIndex < this.videoTags.length && this.videoDecoder.decodeQueueSize < 8) {
+                // Daha az agresif: hem decoder queue'su hem frame queue'su doluysa bekle
+                while (this.decodeIndex < this.videoTags.length && 
+                       this.videoDecoder.decodeQueueSize < 5 && 
+                       this.frameQueue.length < 8) {
                     const tag = this.videoTags[this.decodeIndex++];
-                    if (tag.pType === 0) continue; // AVCDecoderConfigurationRecord
+                    if (tag.pType === 0) continue;
                     this.videoDecoder.decode(new EncodedVideoChunk({
                         type: tag.type,
                         timestamp: tag.timestamp,
@@ -654,11 +668,9 @@
                 this.isPlaying = true;
                 this.videoStartTime = performance.now();
                 
-                // Önceki kare kuyruğunu temizle
                 this.frameQueue.forEach(f => { try { f.close(); } catch(e) {} });
                 this.frameQueue = [];
                 
-                // Seek noktasına göre başlangıç indeksini bul (son keyframe)
                 this.decodeIndex = 0;
                 if (this.seekOffset > 0) {
                     for (let i = this.videoTags.length - 1; i >= 0; i--) {
@@ -670,7 +682,7 @@
                 }
                 
                 this.setupVideoDecoder();
-                this.decodeMore(); // İlk batch'i gönder
+                this.decodeMore();
 
                 if (this.audioElement && this.audioCtx) {
                     if (!this.gainNode) {
@@ -715,7 +727,6 @@
                     try { this.videoDecoder.close(); } catch(e) {}
                     this.videoDecoder = null;
                 }
-                // Bekleyen kareleri temizle
                 this.frameQueue.forEach(f => { try { f.close(); } catch(e) {} });
                 this.frameQueue = [];
                 if (this.audioElement) {
@@ -736,7 +747,6 @@
                 }
             }
 
-            // requestAnimationFrame ile akıcı render döngüsü
             renderLoop() {
                 if (!this.isPlaying) return;
                 
@@ -744,32 +754,31 @@
                 const elapsed = (now - this.videoStartTime) / 1000;
                 const currentVideoTime = this.seekOffset + (elapsed * this.playbackSpeed);
                 
-                // Kare dropping + render: Zamanı gelmiş kareleri işle, en güncelini ekrana bas
+                // Zamanı gelmiş frameleri işle, en güncel uygun olanı render et
                 let frameToRender = null;
                 while (this.frameQueue.length > 0) {
                     const frame = this.frameQueue[0];
-                    const frameTime = frame.timestamp / 1000000; // mikrosaniyeden saniyeye
+                    const frameTime = frame.timestamp / 1000000;
                     
                     // Seek öncesi kareleri at
                     if (frameTime < this.seekOffset - 0.1) {
-                        const oldFrame = this.frameQueue.shift();
-                        try { oldFrame.close(); } catch(e) {}
+                        try { this.frameQueue.shift().close(); } catch(e) {}
                         continue;
                     }
                     
                     if (frameTime <= currentVideoTime) {
-                        const oldFrame = this.frameQueue.shift();
+                        const f = this.frameQueue.shift();
+                        // Önceki uygun frame varsa onu at (frame dropping)
                         if (frameToRender) {
-                            try { frameToRender.close(); } catch(e) {} // Geç kalan kareyi at
+                            try { frameToRender.close(); } catch(e) {}
                         }
-                        frameToRender = oldFrame;
+                        frameToRender = f;
                     } else {
                         break;
                     }
                 }
                 
                 if (frameToRender) {
-                    // Canvas boyutunu sadece değiştiğinde güncelle
                     if (this.canvas.width !== frameToRender.displayWidth) {
                         this.canvas.width = frameToRender.displayWidth;
                     }
@@ -780,10 +789,9 @@
                     try { frameToRender.close(); } catch(e) {}
                 }
                 
-                // Decoder'a yeni kareler gönder
+                // Decoder'ı besle (yedek)
                 this.decodeMore();
                 
-                // Video bitti mi?
                 if (currentVideoTime >= this.duration) {
                     this.pause();
                     this.hasEnded = true;
@@ -798,9 +806,6 @@
                 if (!this.isPlaying) return;
                 const current = this.currentTime;
                 if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
-                if (current >= this.duration) {
-                    return; // renderLoop zaten hallediyor
-                }
                 this.timeLoopTimeout = setTimeout(() => this.timeLoop(), 250);
             }
 
