@@ -483,7 +483,7 @@
                 this.audioSource = null;
                 this.gainNode = null;
                 
-                this.videoTags = [];
+                this.videoTags =[];
                 this.duration = 0;
                 this.isPlaying = false;
                 this.isReady = false;
@@ -497,11 +497,8 @@
                 this.hasEnded = false;
                 this.timeLoopTimeout = null;
                 
-                // Yeni: Akıcı oynatma için kare kuyruğu ve kontrol değişkenleri
-                this.frameQueue = [];
+                this.frameQueue =[];
                 this.decodeIndex = 0;
-                this.lastCanvasWidth = 0;
-                this.lastCanvasHeight = 0;
                 
                 this.onTimeUpdate = null;
                 this.onEnded = null;
@@ -534,29 +531,26 @@
                     try { this.gainNode.disconnect(); } catch(e) {}
                     this.gainNode = null;
                 }
-                this.videoTags = [];
+                this.videoTags =[];
                 this.isReady = false;
                 this.duration = 0;
                 this.seekOffset = 0;
                 this.hasEnded = false;
-                this.frameQueue = [];
+                this.frameQueue =[];
                 this.decodeIndex = 0;
-                this.lastCanvasWidth = 0;
-                this.lastCanvasHeight = 0;
             }
 
             async processFLV(buffer) {
                 const view = new DataView(buffer);
                 let offset = 13;
-                const mp3Chunks = [];
+                const mp3Chunks =[];
                 let maxTimestamp = 0;
 
                 while (offset < buffer.byteLength) {
                     if (offset + 11 > buffer.byteLength) break;
                     const tagType = view.getUint8(offset);
                     const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
-                    // UNSIGNED timestamp düzeltmesi (işaret biti genişlemesini engelle)
-                    const timestamp = ((view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24)) >>> 0;
+                    const dts = ((view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24)) >>> 0;
                     const dOffset = offset + 11;
 
                     if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) {
@@ -570,14 +564,22 @@
                         if ((vInfo & 0x0F) === 7) {
                             const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
                             const isKeyframe = (vInfo >> 4) === 1;
+                            let cts = 0;
+                            if (pType === 1) {
+                                cts = (view.getUint8(dOffset + 2) << 16) | (view.getUint8(dOffset + 3) << 8) | view.getUint8(dOffset + 4);
+                                if (cts & 0x800000) cts -= 0x1000000;
+                            }
+                            
+                            const pts = dts + cts;
+
                             this.videoTags.push({
                                 type: isKeyframe ? 'key' : 'delta',
-                                timestamp: timestamp * 1000, // mikrosaniye
+                                timestamp: pts * 1000,
                                 data: payload,
                                 pType,
-                                tsSec: timestamp / 1000
+                                tsSec: pts / 1000
                             });
-                            if (timestamp > maxTimestamp) maxTimestamp = timestamp;
+                            if (pts > maxTimestamp) maxTimestamp = pts;
                         }
                     }
                     offset += 11 + dataSize + 4;
@@ -610,8 +612,6 @@
                 this.videoDecoder = new VideoDecoder({
                     output: (frame) => {
                         this.frameQueue.push(frame);
-                        // Yeni kare gelince decode'e devam et
-                        this.decodeMore();
                     },
                     error: (e) => console.error('VideoDecoder error:', e)
                 });
@@ -628,13 +628,13 @@
                 this.videoDecoder.configure(config);
             }
 
-            // Decoder'ı aşırı yüklemeden kontrollü decode
             decodeMore() {
                 if (!this.videoDecoder || this.videoDecoder.state !== 'configured') return;
+                if (this.frameQueue.length >= 30) return;
                 
-                while (this.decodeIndex < this.videoTags.length && this.videoDecoder.decodeQueueSize < 8) {
+                while (this.decodeIndex < this.videoTags.length && this.videoDecoder.decodeQueueSize < 16) {
                     const tag = this.videoTags[this.decodeIndex++];
-                    if (tag.pType === 0) continue; // AVCDecoderConfigurationRecord
+                    if (tag.pType === 0) continue; 
                     this.videoDecoder.decode(new EncodedVideoChunk({
                         type: tag.type,
                         timestamp: tag.timestamp,
@@ -654,11 +654,9 @@
                 this.isPlaying = true;
                 this.videoStartTime = performance.now();
                 
-                // Önceki kare kuyruğunu temizle
                 this.frameQueue.forEach(f => { try { f.close(); } catch(e) {} });
-                this.frameQueue = [];
+                this.frameQueue =[];
                 
-                // Seek noktasına göre başlangıç indeksini bul (son keyframe)
                 this.decodeIndex = 0;
                 if (this.seekOffset > 0) {
                     for (let i = this.videoTags.length - 1; i >= 0; i--) {
@@ -670,7 +668,7 @@
                 }
                 
                 this.setupVideoDecoder();
-                this.decodeMore(); // İlk batch'i gönder
+                this.decodeMore(); 
 
                 if (this.audioElement && this.audioCtx) {
                     if (!this.gainNode) {
@@ -715,9 +713,8 @@
                     try { this.videoDecoder.close(); } catch(e) {}
                     this.videoDecoder = null;
                 }
-                // Bekleyen kareleri temizle
                 this.frameQueue.forEach(f => { try { f.close(); } catch(e) {} });
-                this.frameQueue = [];
+                this.frameQueue =[];
                 if (this.audioElement) {
                     this.audioElement.pause();
                 }
@@ -736,40 +733,45 @@
                 }
             }
 
-            // requestAnimationFrame ile akıcı render döngüsü
             renderLoop() {
                 if (!this.isPlaying) return;
-                
                 const now = performance.now();
                 const elapsed = (now - this.videoStartTime) / 1000;
-                const currentVideoTime = this.seekOffset + (elapsed * this.playbackSpeed);
+                let currentVideoTime = this.seekOffset + (elapsed * this.playbackSpeed);
                 
-                // Kare dropping + render: Zamanı gelmiş kareleri işle, en güncelini ekrana bas
+                if (this.audioElement && !this.audioElement.paused) {
+                    const audioTime = this.audioElement.currentTime;
+                    const diff = currentVideoTime - audioTime;
+                    if (Math.abs(diff) > 0.1) {
+                        this.seekOffset = audioTime;
+                        this.videoStartTime = now;
+                        currentVideoTime = audioTime;
+                    }
+                }
+                
                 let frameToRender = null;
                 while (this.frameQueue.length > 0) {
                     const frame = this.frameQueue[0];
-                    const frameTime = frame.timestamp / 1000000; // mikrosaniyeden saniyeye
+                    const frameTime = frame.timestamp / 1000000; 
                     
-                    // Seek öncesi kareleri at
-                    if (frameTime < this.seekOffset - 0.1) {
+                    if (frameTime < currentVideoTime - 0.1) {
                         const oldFrame = this.frameQueue.shift();
                         try { oldFrame.close(); } catch(e) {}
                         continue;
                     }
                     
-                    if (frameTime <= currentVideoTime) {
+                    if (frameTime <= currentVideoTime + 0.015) {
                         const oldFrame = this.frameQueue.shift();
                         if (frameToRender) {
-                            try { frameToRender.close(); } catch(e) {} // Geç kalan kareyi at
+                            try { frameToRender.close(); } catch(e) {} 
                         }
                         frameToRender = oldFrame;
                     } else {
-                        break;
+                        break; 
                     }
                 }
                 
                 if (frameToRender) {
-                    // Canvas boyutunu sadece değiştiğinde güncelle
                     if (this.canvas.width !== frameToRender.displayWidth) {
                         this.canvas.width = frameToRender.displayWidth;
                     }
@@ -780,10 +782,8 @@
                     try { frameToRender.close(); } catch(e) {}
                 }
                 
-                // Decoder'a yeni kareler gönder
                 this.decodeMore();
                 
-                // Video bitti mi?
                 if (currentVideoTime >= this.duration) {
                     this.pause();
                     this.hasEnded = true;
@@ -799,7 +799,7 @@
                 const current = this.currentTime;
                 if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
                 if (current >= this.duration) {
-                    return; // renderLoop zaten hallediyor
+                    return;
                 }
                 this.timeLoopTimeout = setTimeout(() => this.timeLoop(), 250);
             }
@@ -829,8 +829,17 @@
 
             get currentTime() {
                 if (!this.isPlaying) return this.seekOffset;
+                
                 const elapsed = (performance.now() - this.videoStartTime) / 1000;
-                return this.seekOffset + (elapsed * this.playbackSpeed);
+                let time = this.seekOffset + (elapsed * this.playbackSpeed);
+                
+                if (this.audioElement && !this.audioElement.paused) {
+                    const diff = time - this.audioElement.currentTime;
+                    if (Math.abs(diff) > 0.1) {
+                        time = this.audioElement.currentTime;
+                    }
+                }
+                return time;
             }
         }
 
