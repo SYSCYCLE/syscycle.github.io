@@ -467,40 +467,37 @@
             </div>
         </div>
     </div>
-<script>
-function refreshIcons() {
-    if (window.lucide) window.lucide.createIcons();
-}
 
-class FLVPlayer {
+    <script>
+        function refreshIcons() {
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        class FLVPlayer {
     constructor(canvas) {
         this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
-
+        this.ctx = canvas.getContext('2d');
         this.audioCtx = null;
         this.audioBuffer = null;
         this.audioSource = null;
         this.gainNode = null;
-
+        
         this.videoTags = [];
         this.duration = 0;
-
-        this.isReady = false;
         this.isPlaying = false;
-        this.hasEnded = false;
-
+        this.isReady = false;
         this.playbackSpeed = 1;
         this.volume = 1;
-
+        
         this.seekOffset = 0;
-        this.playStartedAt = 0;
-
-        this.videoDecoder = null;
+        this.videoStartTime = 0;
         this.rafId = null;
-
-        this.onReady = null;
+        this.videoDecoder = null;
+        this.hasEnded = false;
+        
         this.onTimeUpdate = null;
         this.onEnded = null;
+        this.onReady = null;
     }
 
     async loadFile(file) {
@@ -512,123 +509,98 @@ class FLVPlayer {
     reset() {
         this.pause();
         this.videoTags = [];
+        this.isReady = false;
         this.duration = 0;
         this.seekOffset = 0;
-        this.isReady = false;
         this.hasEnded = false;
-        this.clearCanvas();
-    }
-
-    clearCanvas() {
-        this.canvas.width = 1280;
-        this.canvas.height = 720;
-        this.ctx.fillStyle = "#000";
-        this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
     }
 
     async processFLV(buffer) {
         const view = new DataView(buffer);
         let offset = 13;
-        let maxTimestamp = 0;
         const mp3Chunks = [];
+        let maxTimestamp = 0;
 
         while (offset < buffer.byteLength) {
             if (offset + 11 > buffer.byteLength) break;
-
             const tagType = view.getUint8(offset);
-            const dataSize =
-                (view.getUint8(offset + 1) << 16) |
-                (view.getUint8(offset + 2) << 8) |
-                view.getUint8(offset + 3);
+            const dataSize = (view.getUint8(offset + 1) << 16) | (view.getUint8(offset + 2) << 8) | view.getUint8(offset + 3);
+            const timestamp = (view.getUint8(offset + 4) << 16) | (view.getUint8(offset + 5) << 8) | view.getUint8(offset + 6) | (view.getUint8(offset + 7) << 24);
+            const dOffset = offset + 11;
 
-            const timestamp =
-                (view.getUint8(offset + 4) << 16) |
-                (view.getUint8(offset + 5) << 8) |
-                view.getUint8(offset + 6) |
-                (view.getUint8(offset + 7) << 24);
-
-            const dataOffset = offset + 11;
-
-            if (tagType === 0x08) {
-                const audioInfo = view.getUint8(dataOffset);
-                if (((audioInfo & 0xF0) >> 4) === 2) {
-                    mp3Chunks.push(buffer.slice(dataOffset + 1, dataOffset + dataSize));
+            if (tagType === 0x08 && dOffset + 1 < buffer.byteLength) {
+                const aInfo = view.getUint8(dOffset);
+                if (((aInfo & 0xF0) >> 4) === 2) {
+                    mp3Chunks.push(buffer.slice(dOffset + 1, dOffset + dataSize));
                 }
-            }
-
-            if (tagType === 0x09) {
-                const vInfo = view.getUint8(dataOffset);
-                const packetType = view.getUint8(dataOffset + 1);
-
+            } else if (tagType === 0x09 && dOffset + 5 < buffer.byteLength) {
+                const vInfo = view.getUint8(dOffset);
+                const pType = view.getUint8(dOffset + 1);
                 if ((vInfo & 0x0F) === 7) {
-                    const payload = buffer.slice(dataOffset + 5, dataOffset + dataSize);
-                    const isKey = (vInfo >> 4) === 1;
-
+                    const payload = buffer.slice(dOffset + 5, dOffset + dataSize);
+                    const isKeyframe = (vInfo >> 4) === 1;
                     this.videoTags.push({
-                        type: isKey ? "key" : "delta",
-                        pType: packetType,
+                        type: isKeyframe ? 'key' : 'delta',
                         timestamp: timestamp * 1000,
-                        tsSec: timestamp / 1000,
-                        data: payload
+                        data: payload,
+                        pType,
+                        tsSec: timestamp / 1000
                     });
-
                     if (timestamp > maxTimestamp) maxTimestamp = timestamp;
                 }
             }
-
             offset += 11 + dataSize + 4;
         }
 
         this.duration = maxTimestamp / 1000;
 
-        if (mp3Chunks.length) {
-            const blob = new Blob(mp3Chunks, {type:"audio/mpeg"});
-            const arr = await blob.arrayBuffer();
-
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            this.audioBuffer = await this.audioCtx.decodeAudioData(arr);
+        if (mp3Chunks.length > 0) {
+            const fullAudioBlob = new Blob(mp3Chunks, { type: 'audio/mpeg' });
+            const audioArrayBuffer = await fullAudioBlob.arrayBuffer();
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            this.audioBuffer = await this.audioCtx.decodeAudioData(audioArrayBuffer);
         }
 
         this.isReady = true;
         if (this.onReady) this.onReady(this.duration);
     }
 
-    setupDecoder(startIndex) {
+    setupVideoDecoder(startFromIndex) {
         this.videoDecoder = new VideoDecoder({
-            output: frame => {
-                const frameSec = frame.timestamp / 1000000;
-                const relative = (frameSec - this.seekOffset) / this.playbackSpeed;
-                const drawAt = this.playStartedAt + relative * 1000;
-                const wait = drawAt - performance.now();
-
+            output: (frame) => {
+                const frameTime = frame.timestamp / 1000000;
+                const relativeTime = (frameTime - this.seekOffset) / this.playbackSpeed;
+                const scheduledTime = this.videoStartTime + relativeTime * 1000;
+                const wait = scheduledTime - performance.now();
+                
                 setTimeout(() => {
-                    if (!this.isPlaying) {
-                        frame.close();
-                        return;
-                    }
-
+                    if (!this.isPlaying) return;
                     this.canvas.width = frame.displayWidth;
                     this.canvas.height = frame.displayHeight;
-                    this.ctx.drawImage(frame,0,0);
+                    this.ctx.drawImage(frame, 0, 0);
                     frame.close();
-
                 }, Math.max(0, wait));
             },
-            error: e => console.error(e)
+            error: (e) => console.error(e)
         });
 
-        let config = this.videoTags.find(x => x.pType === 0);
-        if (!config) throw new Error("Decoder config yok");
+        let config = null;
+        for (let i = 0; i < this.videoTags.length; i++) {
+            if (this.videoTags[i].pType === 0) {
+                config = { codec: 'avc1.42E01E', description: this.videoTags[i].data };
+                break;
+            }
+        }
 
-        this.videoDecoder.configure({
-            codec: "avc1.42E01E",
-            description: config.data
-        });
+        if (!config) throw new Error('No AVCDecoderConfiguration found');
 
-        for (let i = startIndex; i < this.videoTags.length; i++) {
+        this.videoDecoder.configure(config);
+
+        for (let i = startFromIndex; i < this.videoTags.length; i++) {
             const tag = this.videoTags[i];
             if (tag.pType === 0) continue;
-
             this.videoDecoder.decode(new EncodedVideoChunk({
                 type: tag.type,
                 timestamp: tag.timestamp,
@@ -639,104 +611,105 @@ class FLVPlayer {
 
     play() {
         if (!this.isReady || this.isPlaying) return;
-
-        if (this.hasEnded || this.seekOffset >= this.duration - 0.1) {
+        
+        if (this.hasEnded || this.seekOffset >= this.duration - 0.2) {
             this.seekOffset = 0;
             this.hasEnded = false;
         }
 
         this.isPlaying = true;
-        this.playStartedAt = performance.now();
+        this.videoStartTime = performance.now();
 
         let startIndex = 0;
-
-        for (let i = this.videoTags.length - 1; i >= 0; i--) {
-            const t = this.videoTags[i];
-            if (t.tsSec <= this.seekOffset && t.type === "key") {
-                startIndex = i;
-                break;
+        if (this.seekOffset > 0) {
+            for (let i = this.videoTags.length - 1; i >= 0; i--) {
+                if (this.videoTags[i].tsSec <= this.seekOffset && this.videoTags[i].type === 'key') {
+                    startIndex = i;
+                    break;
+                }
             }
         }
+        this.setupVideoDecoder(startIndex);
 
-        this.setupDecoder(startIndex);
-        this.startAudio();
-        this.loop();
-    }
-
-    startAudio() {
-        if (!this.audioBuffer || !this.audioCtx) return;
-
-        this.audioSource = this.audioCtx.createBufferSource();
-        this.gainNode = this.audioCtx.createGain();
-
-        this.audioSource.buffer = this.audioBuffer;
-        this.audioSource.playbackRate.value = this.playbackSpeed;
-
-        this.gainNode.gain.value = this.volume;
-
-        this.audioSource.connect(this.gainNode);
-        this.gainNode.connect(this.audioCtx.destination);
-
-        if (this.audioCtx.state === "suspended") {
-            this.audioCtx.resume();
+        if (this.audioBuffer && this.audioCtx) {
+            this.audioSource = this.audioCtx.createBufferSource();
+            this.audioSource.buffer = this.audioBuffer;
+            this.gainNode = this.audioCtx.createGain();
+            this.gainNode.gain.value = this.volume;
+            this.audioSource.connect(this.gainNode);
+            this.gainNode.connect(this.audioCtx.destination);
+            
+            // HIZ AYARI + PITCH KORUMA
+            this.audioSource.playbackRate.value = this.playbackSpeed;
+            this.audioSource.detune.value = -1200 * Math.log2(this.playbackSpeed);
+            
+            if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            
+            this.audioSource.start(0, this.seekOffset);
+            
+            this.audioSource.onended = () => {
+                if (this.isPlaying && this.currentTime >= this.duration - 0.5) {
+                    this.pause();
+                    this.hasEnded = true;
+                    if (this.onEnded) this.onEnded();
+                }
+            };
         }
 
-        this.audioSource.start(0, this.seekOffset);
-
-        this.audioSource.onended = () => {
-            if (this.isPlaying && this.currentTime >= this.duration - 0.2) {
-                this.finish();
-            }
-        };
+        this.timeLoop();
     }
 
     pause() {
         if (!this.isPlaying) return;
-
+        
+        // DURDURMADAN ÖNCE KALINAN YERİ KAYDET
         this.seekOffset = this.currentTime;
+        
         this.isPlaying = false;
-
-        cancelAnimationFrame(this.rafId);
-
-        if (this.audioSource) {
-            try { this.audioSource.stop(); } catch(e){}
-            this.audioSource = null;
-        }
-
+        if (this.rafId) cancelAnimationFrame(this.rafId);
         if (this.videoDecoder) {
-            try { this.videoDecoder.close(); } catch(e){}
+            try { this.videoDecoder.close(); } catch(e) {}
             this.videoDecoder = null;
         }
-    }
-
-    finish() {
-        this.pause();
-        this.hasEnded = true;
-        this.seekOffset = this.duration;
-        if (this.onEnded) this.onEnded();
+        if (this.audioSource) {
+            try { this.audioSource.stop(); } catch(e) {}
+            this.audioSource = null;
+        }
     }
 
     seek(time) {
         const wasPlaying = this.isPlaying;
-
         this.pause();
-
         this.seekOffset = Math.max(0, Math.min(time, this.duration));
         this.hasEnded = false;
+        if (wasPlaying) {
+            setTimeout(() => this.play(), 50);
+        }
+    }
 
-        if (wasPlaying) this.play();
+    timeLoop() {
+        if (!this.isPlaying) return;
+        const current = this.currentTime;
+        if (this.onTimeUpdate) this.onTimeUpdate(current, this.duration);
+        if (current >= this.duration) {
+            this.pause();
+            this.hasEnded = true;
+            if (this.onEnded) this.onEnded();
+            return;
+        }
+        this.rafId = requestAnimationFrame(() => this.timeLoop());
     }
 
     setSpeed(speed) {
-        const cur = this.currentTime;
         const wasPlaying = this.isPlaying;
-
-        this.pause();
-
+        const current = this.currentTime;
         this.playbackSpeed = speed;
-        this.seekOffset = cur;
-
-        if (wasPlaying) this.play();
+        if (wasPlaying) {
+            this.pause();
+            this.seekOffset = current;
+            this.hasEnded = false;
+            setTimeout(() => this.play(), 50);
+        }
     }
 
     setVolume(vol) {
@@ -744,30 +717,12 @@ class FLVPlayer {
         if (this.gainNode) this.gainNode.gain.value = vol;
     }
 
-    loop() {
-        if (!this.isPlaying) return;
-
-        const cur = this.currentTime;
-
-        if (this.onTimeUpdate) {
-            this.onTimeUpdate(cur, this.duration);
-        }
-
-        if (cur >= this.duration) {
-            this.finish();
-            return;
-        }
-
-        this.rafId = requestAnimationFrame(() => this.loop());
-    }
-
     get currentTime() {
         if (!this.isPlaying) return this.seekOffset;
-
-        const elapsed = (performance.now() - this.playStartedAt) / 1000;
-        return this.seekOffset + elapsed * this.playbackSpeed;
+        const elapsed = (performance.now() - this.videoStartTime) / 1000;
+        return this.seekOffset + (elapsed * this.playbackSpeed);
     }
-}
-</script>
+
+    </script>
 </body>
 </html>
