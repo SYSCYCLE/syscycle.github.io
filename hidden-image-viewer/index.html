@@ -3,38 +3,79 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WASM Passthrough – Orijinal Pikseller</title>
+    <title>Piksel Grid – Div'ler ile (Çökmez)</title>
     <style>
-        body { font-family: monospace; padding: 1rem; background: #1e1e1e; color: #eee; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #output {
-            image-rendering: pixelated;
-            background-repeat: no-repeat;
-            background-size: contain;
-            background-position: center;
-            border: 2px solid #444;
-            margin-top: 1rem;
-            min-height: 100px;
-            background-color: #333;
-            width: 100%;
-            max-width: 800px;
-            height: auto;
-            aspect-ratio: attr(data-w) / attr(data-h);
+        * { box-sizing: border-box; }
+        body {
+            font-family: monospace;
+            padding: 1rem;
+            background: #1e1e1e;
+            color: #eee;
+            margin: 0;
         }
-        #info { margin-top: 1rem; text-align: center; }
-        input, button { padding: 0.5rem; font-size: 1rem; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; }
-        #scaleContainer { margin-top: 1rem; display: flex; gap: 1rem; align-items: center; }
-        .container { width: 100%; max-width: 800px; }
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        .pixel-grid {
+            display: grid;
+            width: fit-content;
+            max-width: 100%;
+            border: 2px solid #444;
+            background: #111;
+            image-rendering: pixelated;
+        }
+        .pixel {
+            width: 4px;
+            height: 4px;
+            flex-shrink: 0;
+        }
+        #info {
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            text-align: center;
+        }
+        input, button {
+            padding: 0.5rem;
+            font-size: 1rem;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            cursor: pointer;
+        }
+        #controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        #scaleContainer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #output {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-<div class="container">
+
+<div id="controls">
     <input type="file" id="fileInput" accept="image/*">
     <div id="scaleContainer">
-        <label>Büyütme: <span id="scaleValue">4</span>x</label>
+        <label>Piksel boyutu: <span id="scaleValue">4</span>px</label>
         <input type="range" id="scaleSlider" min="1" max="12" value="4" step="1">
     </div>
-    <div id="info">📁 Görsel seçin – WASM passthrough, orijinal renkler.</div>
-    <div id="output" data-w="0" data-h="0"></div>
+</div>
+<div id="info">📁 Görsel seçin – her piksel bir div, max 200×200 piksel.</div>
+<div id="container">
+    <div id="output"></div>
 </div>
 
 <script>
@@ -49,16 +90,15 @@
     const scaleValue = document.getElementById('scaleValue');
 
     let wasmInstance = null;
-    let currentImageData = null;
-    let currentWidth = 0, currentHeight = 0;
-    let scaleFactor = 4;
+    let currentPixels = null;
+    let currentW = 0, currentH = 0;
+    let pixelSize = 4;
 
     async function loadWasm() {
         try {
             const result = await WebAssembly.instantiate(wasmCode, {});
             wasmInstance = result.instance;
             info.textContent = '✅ WASM passthrough yüklendi. Görsel seçin.';
-            console.log('WASM yüklendi (passthrough)');
         } catch (e) {
             info.textContent = '❌ WASM yüklenemedi: ' + e.message;
             console.error(e);
@@ -67,10 +107,10 @@
     loadWasm();
 
     scaleSlider.addEventListener('input', () => {
-        scaleFactor = parseInt(scaleSlider.value);
-        scaleValue.textContent = scaleFactor;
-        if (currentImageData) {
-            renderPixelated(currentImageData, currentWidth, currentHeight, scaleFactor);
+        pixelSize = parseInt(scaleSlider.value);
+        scaleValue.textContent = pixelSize;
+        if (currentPixels) {
+            renderGrid(currentPixels, currentW, currentH, pixelSize);
         }
     });
 
@@ -82,95 +122,97 @@
             return;
         }
 
-        try {
-            const buffer = await file.arrayBuffer();
-            const bitmap = await createImageBitmap(new Blob([buffer]));
-            const w = bitmap.width;
-            const h = bitmap.height;
-            console.log(`✅ Görsel çözüldü: ${w}x${h}`);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width;
+                let h = img.height;
+                const MAX_DIM = 200;
+                if (w > MAX_DIM || h > MAX_DIM) {
+                    const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                    info.textContent = `⚠️ Görsel ${img.width}×${img.height} → ${w}×${h} boyutuna küçültüldü (çökme önlendi).`;
+                } else {
+                    info.textContent = `📐 ${w}×${h} piksel (orijinal)`;
+                }
 
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(bitmap, 0, 0);
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const data = imageData.data;
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const imageData = ctx.getImageData(0, 0, w, h);
+                const data = imageData.data;
 
-            const len = data.length;
-            const memory = wasmInstance.exports.memory;
-            let view = new Uint8Array(memory.buffer);
+                const len = data.length;
+                const memory = wasmInstance.exports.memory;
+                let view = new Uint8Array(memory.buffer);
 
-            if (view.length < len) {
-                const pagesNeeded = Math.ceil((len - view.length) / 65536) + 1;
-                memory.grow(pagesNeeded);
-                view = new Uint8Array(memory.buffer);
-            }
+                if (view.length < len) {
+                    const pagesNeeded = Math.ceil((len - view.length) / 65536) + 1;
+                    memory.grow(pagesNeeded);
+                    view = new Uint8Array(memory.buffer);
+                }
 
-            const offset = 0;
-            view.set(data, offset);
-            wasmInstance.exports.process(offset, len);
-            const processed = view.subarray(offset, offset + len);
-            data.set(processed);
+                const offset = 0;
+                view.set(data, offset);
+                wasmInstance.exports.process(offset, len);
+                const processed = view.subarray(offset, offset + len);
+                data.set(processed);
 
-            currentImageData = data;
-            currentWidth = w;
-            currentHeight = h;
-            renderPixelated(data, w, h, scaleFactor);
+                currentPixels = data;
+                currentW = w;
+                currentH = h;
+                renderGrid(data, w, h, pixelSize);
 
-            info.textContent = `✅ ${w}×${h} – ${w*h} piksel (orijinal, WASM passthrough)`;
-            bitmap.close();
-            canvas.width = 0;
-            canvas.height = 0;
-
-        } catch (err) {
-            console.error('Hata:', err);
-            info.textContent = '❌ Görsel işlenirken hata: ' + err.message;
-        }
+                canvas.width = 0;
+                canvas.height = 0;
+                img.src = '';
+            };
+            img.onerror = () => {
+                info.textContent = '❌ Görsel yüklenemedi! Dosya bozuk olabilir.';
+            };
+            img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
     });
 
-    function renderPixelated(data, w, h, scale) {
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        const imageData = new ImageData(data, w, h);
-        ctx.putImageData(imageData, 0, 0);
-        const containerWidth = Math.min(window.innerWidth - 40, 800);
-        const scaledW = Math.min(w * scale, containerWidth);
-        const scaledH = (scaledW / w) * h;
+    function renderGrid(data, w, h, size) {
+        const start = performance.now();
 
-        canvas.toBlob((blob) => {
-            if (!blob) {
-                const url = canvas.toDataURL('image/png');
-                outputDiv.style.backgroundImage = `url(${url})`;
-                outputDiv.style.width = '100%';
-                outputDiv.style.maxWidth = '800px';
-                outputDiv.style.height = 'auto';
-                outputDiv.style.aspectRatio = w + ' / ' + h;
-                outputDiv.dataset.w = w;
-                outputDiv.dataset.h = h;
-                return;
-            }
-            const url = URL.createObjectURL(blob);
-            outputDiv.style.backgroundImage = `url(${url})`;
-            outputDiv.style.width = '100%';
-            outputDiv.style.maxWidth = '800px';
-            outputDiv.style.height = 'auto';
-            outputDiv.style.aspectRatio = w + ' / ' + h;
-            outputDiv.dataset.w = w;
-            outputDiv.dataset.h = h;
+        outputDiv.innerHTML = '';
 
-            if (outputDiv._blobUrl) URL.revokeObjectURL(outputDiv._blobUrl);
-            outputDiv._blobUrl = url;
-        }, 'image/png');
+        const grid = document.createElement('div');
+        grid.className = 'pixel-grid';
+        grid.style.gridTemplateColumns = `repeat(${w}, ${size}px)`;
+        grid.style.gridTemplateRows = `repeat(${h}, ${size}px)`;
+
+        const fragment = document.createDocumentFragment();
+        const total = w * h;
+
+        for (let i = 0; i < total; i++) {
+            const idx = i * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const pixel = document.createElement('div');
+            pixel.className = 'pixel';
+            pixel.style.width = size + 'px';
+            pixel.style.height = size + 'px';
+            pixel.style.backgroundColor = `rgb(${r},${g},${b})`;
+            fragment.appendChild(pixel);
+        }
+
+        grid.appendChild(fragment);
+        outputDiv.appendChild(grid);
+
+        const elapsed = (performance.now() - start).toFixed(1);
+        const pixelCount = total;
+        info.textContent += ` | ${pixelCount} piksel, ${elapsed}ms'de oluşturuldu.`;
     }
-
-    window.addEventListener('resize', () => {
-        if (currentImageData) {
-            renderPixelated(currentImageData, currentWidth, currentHeight, scaleFactor);
-        }
-    });
 </script>
 </body>
 </html>
