@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Passthrough – Orijinal Pikseller</title>
+    <style>
+        body { font-family: monospace; padding: 1rem; background: #1e1e1e; color: #eee; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        #output {
+            image-rendering: pixelated;
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-position: center;
+            border: 2px solid #444;
+            margin-top: 1rem;
+            min-height: 100px;
+            background-color: #333;
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: attr(data-w) / attr(data-h);
+        }
+        #info { margin-top: 1rem; text-align: center; }
+        input, button { padding: 0.5rem; font-size: 1rem; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; }
+        #scaleContainer { margin-top: 1rem; display: flex; gap: 1rem; align-items: center; }
+        .container { width: 100%; max-width: 800px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <input type="file" id="fileInput" accept="image/*">
+    <div id="scaleContainer">
+        <label>Büyütme: <span id="scaleValue">4</span>x</label>
+        <input type="range" id="scaleSlider" min="1" max="12" value="4" step="1">
+    </div>
+    <div id="info">📁 Görsel seçin – WASM passthrough, orijinal renkler.</div>
+    <div id="output" data-w="0" data-h="0"></div>
+</div>
+
+<script>
+    const wasmCode = new Uint8Array([
+        0, 97, 115, 109, 1, 0, 0, 0, 1, 6, 1, 96, 2, 127, 127, 0, 3, 2, 1, 0, 5, 3, 1, 0, 1, 7, 20, 2, 6, 109, 101, 109, 111, 114, 121, 2, 0, 7, 112, 114, 111, 99, 101, 115, 115, 0, 0, 10, 4, 1, 2, 0, 11, 0, 20, 4, 110, 97, 109, 101, 2, 13, 1, 0, 2, 0, 3, 112, 116, 114, 1, 3, 108, 101, 110
+    ]);
+
+    const fileInput = document.getElementById('fileInput');
+    const outputDiv = document.getElementById('output');
+    const info = document.getElementById('info');
+    const scaleSlider = document.getElementById('scaleSlider');
+    const scaleValue = document.getElementById('scaleValue');
+
+    let wasmInstance = null;
+    let currentImageData = null;
+    let currentWidth = 0, currentHeight = 0;
+    let scaleFactor = 4;
+
+    async function loadWasm() {
+        try {
+            const result = await WebAssembly.instantiate(wasmCode, {});
+            wasmInstance = result.instance;
+            info.textContent = '✅ WASM passthrough yüklendi. Görsel seçin.';
+            console.log('WASM yüklendi (passthrough)');
+        } catch (e) {
+            info.textContent = '❌ WASM yüklenemedi: ' + e.message;
+            console.error(e);
+        }
+    }
+    loadWasm();
+
+    scaleSlider.addEventListener('input', () => {
+        scaleFactor = parseInt(scaleSlider.value);
+        scaleValue.textContent = scaleFactor;
+        if (currentImageData) {
+            renderPixelated(currentImageData, currentWidth, currentHeight, scaleFactor);
+        }
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!wasmInstance) {
+            info.textContent = '⏳ WASM yükleniyor, bekleyin...';
+            return;
+        }
+
+        try {
+            const buffer = await file.arrayBuffer();
+            const bitmap = await createImageBitmap(new Blob([buffer]));
+            const w = bitmap.width;
+            const h = bitmap.height;
+            console.log(`✅ Görsel çözüldü: ${w}x${h}`);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0);
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+
+            const len = data.length;
+            const memory = wasmInstance.exports.memory;
+            let view = new Uint8Array(memory.buffer);
+
+            if (view.length < len) {
+                const pagesNeeded = Math.ceil((len - view.length) / 65536) + 1;
+                memory.grow(pagesNeeded);
+                view = new Uint8Array(memory.buffer);
+            }
+
+            const offset = 0;
+            view.set(data, offset);
+            wasmInstance.exports.process(offset, len);
+            const processed = view.subarray(offset, offset + len);
+            data.set(processed);
+
+            currentImageData = data;
+            currentWidth = w;
+            currentHeight = h;
+            renderPixelated(data, w, h, scaleFactor);
+
+            info.textContent = `✅ ${w}×${h} – ${w*h} piksel (orijinal, WASM passthrough)`;
+            bitmap.close();
+            canvas.width = 0;
+            canvas.height = 0;
+
+        } catch (err) {
+            console.error('Hata:', err);
+            info.textContent = '❌ Görsel işlenirken hata: ' + err.message;
+        }
+    });
+
+    function renderPixelated(data, w, h, scale) {
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        const imageData = new ImageData(data, w, h);
+        ctx.putImageData(imageData, 0, 0);
+        const containerWidth = Math.min(window.innerWidth - 40, 800);
+        const scaledW = Math.min(w * scale, containerWidth);
+        const scaledH = (scaledW / w) * h;
+
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                const url = canvas.toDataURL('image/png');
+                outputDiv.style.backgroundImage = `url(${url})`;
+                outputDiv.style.width = '100%';
+                outputDiv.style.maxWidth = '800px';
+                outputDiv.style.height = 'auto';
+                outputDiv.style.aspectRatio = w + ' / ' + h;
+                outputDiv.dataset.w = w;
+                outputDiv.dataset.h = h;
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            outputDiv.style.backgroundImage = `url(${url})`;
+            outputDiv.style.width = '100%';
+            outputDiv.style.maxWidth = '800px';
+            outputDiv.style.height = 'auto';
+            outputDiv.style.aspectRatio = w + ' / ' + h;
+            outputDiv.dataset.w = w;
+            outputDiv.dataset.h = h;
+
+            if (outputDiv._blobUrl) URL.revokeObjectURL(outputDiv._blobUrl);
+            outputDiv._blobUrl = url;
+        }, 'image/png');
+    }
+
+    window.addEventListener('resize', () => {
+        if (currentImageData) {
+            renderPixelated(currentImageData, currentWidth, currentHeight, scaleFactor);
+        }
+    });
+</script>
+</body>
+</html>
