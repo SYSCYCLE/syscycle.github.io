@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piksel Grid – Div'ler ile (Çökmez)</title>
+    <title>Photo to Pixel Grid</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -129,7 +129,7 @@
             img.onload = () => {
                 let w = img.width;
                 let h = img.height;
-                const MAX_DIM = 200;
+                const MAX_DIM = 400;
                 if (w > MAX_DIM || h > MAX_DIM) {
                     const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
                     w = Math.round(w * ratio);
