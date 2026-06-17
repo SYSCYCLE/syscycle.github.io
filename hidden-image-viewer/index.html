@@ -129,7 +129,7 @@
             img.onload = () => {
                 let w = img.width;
                 let h = img.height;
-                const MAX_DIM = 400;
+                const MAX_DIM = 800;
                 if (w > MAX_DIM || h > MAX_DIM) {
                     const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
                     w = Math.round(w * ratio);
