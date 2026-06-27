@@ -1,0 +1,64 @@
+.language-list[data-lang-us]::before {
+	content: url('lang-us.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 163px;
+}
+
+.language-list[data-lang-tr]::before {
+	content: url('lang-tr.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 237.2px;
+}
+.language-list[data-lang-ru]::before {
+	content: url('lang-ru.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 316px;
+}
+.language-list[data-lang-cn]::before {
+	content: url('lang-cn.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 397.1px;
+}
+.language-list[data-lang-de]::before {
+	content: url('lang-de.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 480px;
+}
+.language-list[data-lang-fr]::before {
+	content: url('lang-fr.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 557px;
+}
+.language-list[data-lang-im]::before {
+	content: url('lang-im.svg');
+	display: block;
+	width: 70px;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	top: 637px;
+}

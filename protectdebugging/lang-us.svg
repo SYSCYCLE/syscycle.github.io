@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.35 -0.25 1235.35 650.25">
+	<defs>
+		<polygon id="pt" points="-0.1624598481164531,0 0,-0.5 0.1624598481164531,0" transform="scale(0.0616)" fill="#FFF"/>
+		<g id="star">
+			<use href="#pt" transform="rotate(-144)"/>
+			<use href="#pt" transform="rotate(-72)"/>
+			<use href="#pt"/><use href="#pt" transform="rotate(72)"/>
+			<use href="#pt" transform="rotate(144)"/>
+		</g>
+		<g id="s5">
+			<use href="#star" x="-0.252"/>
+			<use href="#star" x="-0.126"/>
+			<use href="#star"/>
+			<use href="#star" x="0.126"/>
+			<use href="#star" x="0.252"/>
+		</g>
+		<g id="s6">
+			<use href="#s5" x="-0.063"/>
+			<use href="#star" x="0.315"/>
+		</g>
+		<g id="x4">
+			<use href="#s6"/>
+			<use href="#s5" y="0.054"/>
+			<use href="#s6" y="0.108"/>
+			<use href="#s5" y="0.162"/>
+		</g>
+		<g id="u">
+			<use href="#x4" y="-0.216"/>
+			<use href="#x4"/>
+			<use href="#s6" y="0.216"/>
+		</g>
+		<rect id="stripe" width="1235" height="50" fill="#BB133E"/>
+	</defs>
+	<rect width="1235" height="650" fill="#FFF"/>
+	<use href="#stripe"/>
+	<use href="#stripe" y="100"/>
+	<use href="#stripe" y="200"/>
+	<use href="#stripe" y="300"/>
+	<use href="#stripe" y="400"/>
+	<use href="#stripe" y="500"/>
+	<use href="#stripe" y="600"/>
+	<rect width="494" height="350" fill="#002664"/>
+	<use href="#u" transform="translate(247,175) scale(650)"/>
+</svg>

@@ -1,0 +1,12 @@
+.language-list[data-lang-fr]::after {
+	content: url('select.svg');
+	display: block;
+	width: 30px;
+	position: absolute;
+	top: 570px;
+	right: 10%;
+}
+.language-list[data-lang-fr] {
+	background: #202030;
+	border: 3px solid rgba(0, 140, 255, 1);
+}
