@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PcapView — PCAP Dosya Okuyucu</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/inter@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/jetbrains-mono@latest/index.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+:root{
+  --bg:#0a0e16;--panel:#111826;--panel2:#0d1420;--border:#1e2a3d;--border2:#2a3a52;
+  --text:#e6edf6;--dim:#8b9bb4;--accent:#38bdf8;--accent2:#818cf8;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 600px at 80% -10%,rgba(56,189,248,.08),transparent),
+             radial-gradient(900px 500px at -10% 110%,rgba(129,140,248,.07),transparent),var(--bg);
+  color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;
+  display:flex;flex-direction:column;min-height:100vh;
+}
+/* ---------- üst çubuk ---------- */
+.topbar{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--border);
+  background:rgba(13,20,32,.75);backdrop-filter:blur(8px);position:sticky;top:0;z-index:50;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;color:#06121f;box-shadow:0 4px 18px rgba(56,189,248,.35)}
+.brand h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+.brand p{font-size:11.5px;color:var(--dim)}
+.filebar{display:flex;align-items:center;gap:12px;margin-left:auto;background:var(--panel2);
+  border:1px solid var(--border);padding:7px 12px;border-radius:10px;flex-wrap:wrap}
+.fname{font-weight:600;font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+.fmeta{color:var(--dim);font-size:12px}
+/* ---------- düğmeler ---------- */
+.btn{border:1px solid var(--border2);background:var(--panel);color:var(--text);padding:8px 14px;border-radius:9px;
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#06121f}
+.btn.primary:hover{filter:brightness(1.1);color:#06121f}
+.btn.ghost{background:transparent}
+.btn.small{padding:5px 10px;font-size:12px;border-radius:7px}
+.btn:disabled{opacity:.4;pointer-events:none}
+/* ---------- ana alan ---------- */
+main{flex:1;display:flex;flex-direction:column;padding:18px 20px;gap:14px;max-width:1600px;width:100%;margin:0 auto}
+.dropzone{flex:1;display:grid;place-items:center;border:2px dashed var(--border2);border-radius:16px;
+  min-height:420px;cursor:pointer;transition:.2s;background:rgba(17,24,38,.4)}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:rgba(56,189,248,.05)}
+.dz-inner{text-align:center;padding:40px 20px;max-width:600px}
+.dz-inner h2{font-size:22px;margin:18px 0 8px}
+.dz-inner p{color:var(--dim);margin-bottom:22px}
+.dz-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.dz-note{margin-top:26px;font-size:12px;color:var(--dim);background:var(--panel2);border:1px solid var(--border);
+  padding:10px 14px;border-radius:10px;display:inline-block}
+/* ---------- istatistik ---------- */
+.stats{display:flex;flex-direction:column;gap:12px}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.s-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin-bottom:6px}
+.s-value{font-size:20px;font-weight:700;font-family:var(--mono)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.chart{padding:14px 16px}
+.chart h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:12px}
+.crow{display:grid;grid-template-columns:96px 1fr auto;gap:8px;align-items:center;margin-bottom:7px;font-size:12px}
+.cname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.cbar i{display:block;height:100%;border-radius:4px;transition:width .4s}
+.cval{font-family:var(--mono);color:var(--dim);font-size:11px;text-align:right}
+.cval em{font-style:normal;color:var(--accent);margin-left:5px}
+.hist{display:flex;align-items:flex-end;gap:2px;height:70px}
+.hbar{flex:1;background:linear-gradient(180deg,var(--accent),rgba(56,189,248,.25));border-radius:2px 2px 0 0;min-height:2px;transition:.3s}
+.hbar:hover{filter:brightness(1.35)}
+.hlabels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);margin-top:6px;font-family:var(--mono)}
+/* ---------- araç çubuğu ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar input[type=search]{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px;border-radius:9px;font:inherit;font-size:13px}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--accent)}
+.toolbar select{background:var(--panel);border:1px solid var(--border);color:var(--text);
+  padding:8px 10px;border-radius:9px;font:inherit;font-size:13px;cursor:pointer;max-width:230px}
+.pager{display:flex;align-items:center;gap:4px}
+.pager button{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--panel);
+  color:var(--text);cursor:pointer;font-size:13px}
+.pager button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pager button:disabled{opacity:.35;cursor:default}
+#pgInfo{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:56px;text-align:center}
+.count{font-size:12px;color:var(--dim);font-family:var(--mono)}
+.exports{display:flex;gap:6px;margin-left:auto}
+/* ---------- tablo + ayrıntı ---------- */
+.content{display:grid;grid-template-columns:1fr 440px;gap:12px;align-items:start}
+@media(max-width:1100px){.content{grid-template-columns:1fr}}
+.table-wrap{overflow:auto;max-height:calc(100vh - 330px);min-height:300px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{position:sticky;top:0;background:var(--panel2);color:var(--dim);text-align:left;padding:8px 10px;
+  font-size:11px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border2);z-index:2;white-space:nowrap}
+tbody td{padding:5px 10px;border-bottom:1px solid rgba(30,42,61,.5);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:rgba(56,189,248,.08)}
+tr.sel td{background:rgba(56,189,248,.16)!important;box-shadow:inset 2px 0 0 var(--accent)}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+td.mono{font-family:var(--mono);font-size:12px}
+td.dim{color:var(--dim)}
+td.info{max-width:430px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.empty-row{text-align:center;color:var(--dim);padding:30px!important}
+tr.c-http td{background:rgba(192,132,252,.05)}
+tr.c-dns td{background:rgba(96,165,250,.06)}
+tr.c-tls td{background:rgba(74,222,128,.05)}
+tr.c-arp td{background:rgba(45,212,192,.06)}
+tr.c-icmp td{background:rgba(244,114,182,.06)}
+tr.c-dhcp td{background:rgba(250,204,21,.05)}
+tr.c-ntp td{background:rgba(251,146,60,.05)}
+tr.c-svc td{background:rgba(165,180,252,.04)}
+tr.c-udp td{background:rgba(103,200,240,.03)}
+tr.c-ip td{background:rgba(148,163,184,.04)}
+tr.c-other td{background:rgba(120,130,143,.03)}
+.pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--mono);
+  background:rgba(148,163,184,.12);color:#b6c2d6}
+.p-http{background:rgba(192,132,252,.14);color:#d8b4fe}
+.p-dns{background:rgba(96,165,250,.14);color:#93c5fd}
+.p-tls{background:rgba(74,222,128,.13);color:#86efac}
+.p-arp{background:rgba(45,212,192,.13);color:#5eead4}
+.p-icmp{background:rgba(244,114,182,.13);color:#f9a8d4}
+.p-dhcp{background:rgba(250,204,21,.12);color:#fde047}
+.p-ntp{background:rgba(251,146,60,.13);color:#fdba74}
+.p-tcp{background:rgba(148,163,184,.1);color:#a8b8cf}
+.p-udp{background:rgba(103,200,240,.1);color:#8fd6f5}
+.p-ip{background:rgba(161,161,170,.1);color:#c0c0ca}
+.p-svc{background:rgba(165,180,252,.12);color:#c7d2fe}
+.p-other{background:rgba(120,130,143,.1);color:#9aa5b1}
+/* ---------- ayrıntı paneli ---------- */
+.detail{position:sticky;top:76px;max-height:calc(100vh - 110px);display:flex;flex-direction:column;overflow:hidden}
+@media(max-width:1100px){.detail{position:static;max-height:560px}}
+.detail-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+  border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap}
+#detailTitle{font-size:13px;color:var(--dim)}
+#detailTitle b{color:var(--text)}
+.tabs{display:flex;gap:4px;background:var(--panel2);padding:3px;border-radius:8px}
+.tab{border:none;background:transparent;color:var(--dim);padding:5px 12px;border-radius:6px;
+  font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.tab.active{background:var(--border2);color:var(--text)}
+.detail-body{overflow:auto;padding:12px 14px;flex:1}
+.tabpane{display:none}
+.tabpane.active{display:block}
+.layer{border:1px solid var(--border);border-radius:9px;margin-bottom:10px;overflow:hidden}
+.layer summary{padding:9px 12px;background:var(--panel2);cursor:pointer;font-size:12.5px;font-weight:600;
+  list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+.layer summary::-webkit-details-marker{display:none}
+.layer summary::before{content:'▸';color:var(--accent);transition:.15s;font-size:11px}
+.layer[open] summary::before{transform:rotate(90deg)}
+.layer .kvs{padding:6px 0}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:4px 12px;font-size:12px}
+.kv:nth-child(odd){background:rgba(255,255,255,.015)}
+.kv .k{color:var(--dim)}
+.kv .v{font-family:var(--mono);font-size:11.5px;word-break:break-all}
+.hexdump{font-family:var(--mono);font-size:11px;line-height:1.55;color:#b9c7da;background:var(--panel2);
+  border:1px solid var(--border);border-radius:9px;padding:12px;overflow:auto;white-space:pre}
+.empty{color:var(--dim);text-align:center;padding:40px 10px;font-size:13px}
+/* ---------- overlay / toast ---------- */
+.overlay{position:fixed;inset:0;background:rgba(6,10,17,.75);backdrop-filter:blur(4px);display:grid;place-items:center;z-index:100}
+.prog{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:26px 34px;min-width:320px;
+  text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;
+  margin:0 auto 14px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prog-track{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:14px}
+#progBar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .2s}
+#progMsg{font-size:13px;color:var(--dim)}
+.drag-overlay{position:fixed;inset:0;z-index:90;background:rgba(6,10,17,.8);display:grid;place-items:center}
+.drag-overlay div{border:2px dashed var(--accent);border-radius:18px;padding:60px 80px;font-size:20px;
+  font-weight:700;color:var(--accent);background:rgba(56,189,248,.06)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:var(--panel);
+  border:1px solid var(--border2);color:var(--text);padding:11px 18px;border-radius:10px;font-size:13px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:110;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.ok{border-color:rgba(74,222,128,.4)}
+.toast.err{border-color:rgba(248,113,113,.5);color:#fca5a5}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div><h1>PcapView</h1><p>.pcap / .pcapng okuyucu — %100 tarayıcıda, sunucusuz</p></div>
+  </div>
+  <div class="filebar" id="filebar" hidden>
+    <span class="fname" id="fName"></span>
+    <span class="fmeta" id="fMeta"></span>
+    <button class="btn ghost small" id="btnNew">↺ Yeni Dosya</button>
+  </div>
+</header>
+
+<main>
+  <!-- karşılama / bırakma alanı -->
+  <section id="dropzone" class="dropzone">
+    <div class="dz-inner">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="url(#g1)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>
+        <path d="M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+      </svg>
+      <h2>PCAP dosyanızı buraya sürükleyin</h2>
+      <p>veya seçmek için tıklayın — <b>.pcap</b>, <b>.cap</b>, <b>.pcapng</b> ve <b>.pcap.gz</b> desteklenir</p>
+      <div class="dz-actions">
+        <button class="btn primary" id="btnBrowse">📂 Dosya Seç</button>
+        <button class="btn ghost" id="btnSample">✨ Örnek Yakalama ile Dene</button>
+      </div>
+      <div class="dz-note">🔒 Dosyalarınız hiçbir sunucuya yüklenmez; tüm çözümleme tarayıcınızda yapılır.<br>
+      Ethernet, IPv4/IPv6, ARP, TCP, UDP, ICMP, DNS, HTTP, TLS (SNI), DHCP, NTP ve 100+ port servisi tanınır.</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pcap,.cap,.pcapng,.gz,.dmp" hidden>
+  </section>
+
+  <!-- çalışma alanı -->
+  <section id="workspace" hidden>
+    <div class="stats" id="statsPanel">
+      <div class="stat-cards" id="statCards"></div>
+      <div class="charts">
+        <div class="card chart"><h3>Protokol Dağılımı</h3><div id="protoChart"></div></div>
+        <div class="card chart"><h3>En Çok Konuşanlar (kaynak IP)</h3><div id="talkChart"></div></div>
+        <div class="card chart"><h3>Popüler Görüşmeler</h3><div id="convChart"></div></div>
+        <div class="card chart"><h3>Zaman İçinde Trafik</h3><div id="histChart"></div></div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="🔍 Ara: IP, port, protokol, MAC, bilgi…">
+      <select id="protoSel"><option value="all">Tüm Protokoller</option></select>
+      <select id="sizeSel">
+        <option value="50">50 / sayfa</option>
+        <option value="100" selected>100 / sayfa</option>
+        <option value="250">250 / sayfa</option>
+        <option value="500">500 / sayfa</option>
+        <option value="1000">1000 / sayfa</option>
+      </select>
+      <div class="pager">
+        <button id="pgFirst" title="İlk sayfa">«</button>
+        <button id="pgPrev" title="Önceki">‹</button>
+        <span id="pgInfo">1 / 1</span>
+        <button id="pgNext" title="Sonraki">›</button>
+        <button id="pgLast" title="Son sayfa">»</button>
+      </div>
+      <span class="count" id="countInfo"></span>
+      <div class="exports">
+        <button class="btn small" id="btnStats">📊 İstatistik</button>
+        <button class="btn small" id="btnCsv" title="Filtrelenmiş listeyi CSV olarak indir">⬇ CSV</button>
+        <button class="btn small" id="btnJson" title="Filtrelenmiş listeyi JSON olarak indir">⬇ JSON</button>
+        <button class="btn small" id="btnTxt" title="Okunabilir TXT raporu indir">⬇ TXT Rapor</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="table-wrap card">
+        <table>
+          <thead><tr>
+            <th class="num">No</th><th>Zaman</th><th>Kaynak</th><th>Hedef</th>
+            <th>Protokol</th><th class="num">Boyut</th><th>Bilgi</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <aside class="detail card">
+        <div class="detail-head">
+          <span id="detailTitle">Paket ayrıntısı</span>
+          <div class="tabs">
+            <button class="tab active" data-tab="tree">Ayrıntılar</button>
+            <button class="tab" data-tab="hex">Hex</button>
+          </div>
+        </div>
+        <div class="detail-body" id="detailBody">
+          <div class="empty">Ayrıntılarını görmek için listeden bir paket seçin.<br><br>⌨️ ↑ / ↓ tuşlarıyla paketler arasında gezinebilirsiniz.</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="progress" hidden>
+  <div class="prog">
+    <div class="spinner"></div>
+    <div id="progMsg">Hazırlanıyor…</div>
+    <div class="prog-track"><div id="progBar"></div></div>
+  </div>
+</div>
+
+<div class="drag-overlay" id="dragOverlay" hidden><div>📥 Dosyayı buraya bırakın</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ================= yardımcılar ================= */
+const $=s=>document.querySelector(s);
+const tick=()=>new Promise(r=>setTimeout(r,0));
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const _td=new TextDecoder('utf-8',{fatal:false});
+function bytesToText(u8,max){return _td.decode(max?u8.subarray(0,max):u8);}
+function firstLine(pl){return bytesToText(pl,512).split(/\r?\n/,1)[0];}
+function fmtMac(u8,o){let s='';for(let i=0;i<6;i++)s+=(i?':':'')+u8[o+i].toString(16).padStart(2,'0');return s;}
+function fmtIp4(u8,o){return u8[o]+'.'+u8[o+1]+'.'+u8[o+2]+'.'+u8[o+3];}
+function fmtIp6(u8,off){
+  const g=[];for(let i=0;i<8;i++)g.push((u8[off+i*2]<<8)|u8[off+i*2+1]);
+  let best=-1,bestLen=0;
+  for(let i=0;i<8;){if(g[i]===0){let j=i;while(j<8&&g[j]===0)j++;if(j-i>bestLen){bestLen=j-i;best=i;}i=j;}else i++;}
+  if(bestLen<2)return g.map(x=>x.toString(16)).join(':');
+  return g.slice(0,best).map(x=>x.toString(16)).join(':')+'::'+g.slice(best+bestLen).map(x=>x.toString(16)).join(':');
+}
+function u32be(u8,o){return (u8[o]*0x1000000+((u8[o+1]<<16)|(u8[o+2]<<8)|u8[o+3]))>>>0;}
+function fmtBytes(n){
+  if(n<1024)return n.toLocaleString('tr-TR')+' B';
+  const u=['KB','MB','GB','TB'];let i=-1;
+  do{n/=1024;i++;}while(n>=1024&&i<u.length-1);
+  return n.toLocaleString('tr-TR',{maximumFractionDigits:n>=100?0:1})+' '+u[i];
+}
+function fmtDur(sec){
+  if(!isFinite(sec)||sec<=0)return '0 sn';
+  if(sec<1)return Math.round(sec*1000)+' ms';
+  if(sec<60)return sec.toLocaleString('tr-TR',{maximumFractionDigits:2})+' sn';
+  const m=Math.floor(sec/60),s=Math.round(sec%60);
+  if(m<60)return m+' dk '+s+' sn';
+  return Math.floor(m/60)+' sa '+(m%60)+' dk';
+}
+function fmtRate(bps){
+  if(bps<1000)return bps.toLocaleString('tr-TR',{maximumFractionDigits:0})+' bit/sn';
+  if(bps<1e6)return (bps/1000).toLocaleString('tr-TR',{maximumFractionDigits:1})+' kbit/sn';
+  return (bps/1e6).toLocaleString('tr-TR',{maximumFractionDigits:2})+' Mbit/sn';
+}
+function pktTime(p){return p.tsSec+p.tsFrac/1e6;}
+function fmtAbs(p){
+  const d=new Date(p.tsSec*1000+Math.floor(p.tsFrac/1000));
+  const pad=n=>String(n).padStart(2,'0');
+  return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())+'.'+String(d.getMilliseconds()).padStart(3,'0');
+}
+function fmtFull(p){
+  const d=new Date(p.tsSec*1000+Math.floor(p.tsFrac/1000));
+  return d.toLocaleDateString('tr-TR')+' '+d.toLocaleTimeString('tr-TR',{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0');
+}
+function fmtRel(p){return (pktTime(p)-state.firstTs).toFixed(6);}
+function download(content,type,name){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+let toastTimer;
+function toast(msg,type){
+  const t=$('#toast');t.textContent=msg;t.className='toast show '+(type||'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4200);
+}
+function showProgress(msg,pct){$('#progMsg').textContent=msg;$('#progBar').style.width=(pct||0)+'%';$('#progress').hidden=false;}
+function hideProgress(){$('#progress').hidden=true;}
+
+/* ================= sabitler ================= */
+const ETHERTYPES={0x0800:'IPv4',0x0806:'ARP',0x86DD:'IPv6',0x8100:'802.1Q VLAN',0x88A8:'802.1ad QinQ',0x8847:'MPLS',0x88CC:'LLDP',0x88F7:'PTP',0x8035:'RARP',0x0842:'Wake-on-LAN',0x8863:'PPPoE Keşif',0x8864:'PPPoE Oturum'};
+const IP_PROTOS={1:'ICMP',2:'IGMP',4:'IP-in-IP',6:'TCP',17:'UDP',41:'IPv6',47:'GRE',50:'ESP',51:'AH',58:'ICMPv6',88:'EIGRP',89:'OSPF',103:'PIM',112:'VRRP',115:'L2TP',132:'SCTP'};
+const ICMP_TYPES={0:'Echo Reply',3:'Destination Unreachable',4:'Source Quench',5:'Redirect',8:'Echo Request (ping)',9:'Router Advertisement',10:'Router Solicitation',11:'Time Exceeded',12:'Parameter Problem',13:'Timestamp',14:'Timestamp Reply',30:'Traceroute'};
+const ICMP6_TYPES={1:'Destination Unreachable',2:'Packet Too Big',3:'Time Exceeded',4:'Parameter Problem',128:'Echo Request (ping)',129:'Echo Reply',133:'Router Solicitation',134:'Router Advertisement',135:'Neighbor Solicitation',136:'Neighbor Advertisement',137:'Redirect'};
+const RCODES={0:'NOERROR',1:'FORMERR',2:'SERVFAIL',3:'NXDOMAIN',4:'NOTIMP',5:'REFUSED'};
+const DNS_TYPES={1:'A',2:'NS',5:'CNAME',6:'SOA',12:'PTR',15:'MX',16:'TXT',28:'AAAA',33:'SRV',35:'NAPTR',39:'DNAME',43:'DS',46:'RRSIG',47:'NSEC',48:'DNSKEY',50:'NSEC3',52:'TLSA',64:'SVCB',65:'HTTPS',99:'SPF',249:'TKEY',250:'TSIG',252:'AXFR',255:'ANY',257:'CAA'};
+const PORTS={20:'FTP-Data',21:'FTP',22:'SSH',23:'Telnet',25:'SMTP',53:'DNS',67:'DHCP',68:'DHCP',69:'TFTP',80:'HTTP',88:'Kerberos',110:'POP3',111:'RPCbind',123:'NTP',135:'MS-RPC',137:'NetBIOS',139:'NetBIOS',143:'IMAP',161:'SNMP',179:'BGP',389:'LDAP',443:'HTTPS',445:'SMB',465:'SMTPS',500:'IKE',514:'Syslog',520:'RIP',554:'RTSP',587:'SMTP-Sub',623:'IPMI',631:'IPP',636:'LDAPS',873:'rsync',993:'IMAPS',995:'POP3S',1080:'SOCKS',1194:'OpenVPN',1433:'MSSQL',1521:'Oracle',1701:'L2TP',1723:'PPTP',1812:'RADIUS',1883:'MQTT',1900:'SSDP',2049:'NFS',2181:'ZooKeeper',2375:'Docker',3000:'Web',3128:'Squid',3268:'iSCSI',3306:'MySQL',3389:'RDP',3690:'SVN',4444:'Metasploit',4500:'IPSec-NAT',5060:'SIP',5061:'SIPS',5222:'XMPP',5353:'mDNS',5432:'PostgreSQL',5601:'Kibana',5672:'AMQP',5900:'VNC',6379:'Redis',6443:'K8s-API',6667:'IRC',7070:'RTSP-Alt',7687:'Bolt',8000:'HTTP-Alt',8080:'HTTP-Proxy',8081:'HTTP-Alt',8086:'InfluxDB',8200:'Consul',8443:'HTTPS-Alt',8500:'Consul',8883:'MQTT-TLS',8888:'HTTP-Alt',9042:'Cassandra',9090:'Prometheus',9092:'Kafka',9200:'Elastic',9300:'Elastic',9418:'Git',10000:'Webmin',11211:'Memcached',27017:'MongoDB'};
+const PROTO_HEX={http:'#c084fc',dns:'#7aa5ff',tls:'#4ade80',arp:'#2dd4bf',icmp:'#f97fb2',dhcp:'#facc15',ntp:'#fb923c',tcp:'#8fa3bf',udp:'#67c8f0',ip:'#a1a1aa',svc:'#a5b4fc',other:'#78828f'};
+const LBL={id:'İşlem ID',qr:'Tür',qname:'Sorgu Adı',qtype:'Sorgu Tipi',qdcount:'Soru Sayısı',ancount:'Yanıt Kaydı',answers:'Yanıtlar',rcode:'Yanıt Kodu',sürüm:'Sürüm',SNI:'SNI (Sunucu Adı)',tür:'Tür',metot:'Metot',URI:'URI',Host:'Host',protokol:'Protokol',durum:'Durum',servis:'Servis',mesaj:'Mesaj Tipi',mod:'Mod',stratum:'Stratum','İlk Satır':'İlk Satır','Yük Uzunluğu':'Yük Uzunluğu','İstemci MAC':'İstemci MAC'};
+
+/* ================= durum ================= */
+const state={
+  fileName:'',fileSize:0,fileType:'',
+  packets:[],filtered:[],page:0,pageSize:100,
+  selected:-1,query:'',protoFilter:'all',tab:'tree',
+  stats:null,firstTs:0,protoColor:new Map()
+};
+
+/* ================= biçim algılama ================= */
+function detectFormat(u8){
+  if(u8.length<24)return null;
+  const mu=(((u8[0]<<24)|(u8[1]<<16)|(u8[2]<<8)|u8[3])>>>0);
+  if(mu===0xA1B2C3D4||mu===0xD4C3B2A1||mu===0xA1B23C4D||mu===0x4D3CB2A1)return 'pcap';
+  if(mu===0x0A0D0D0A)return 'pcapng';
+  return null;
+}
+
+/* ================= klasik pcap ================= */
+async function parsePcap(buf,u8,onProg){
+  const dv=new DataView(buf);
+  const magic=dv.getUint32(0,false)>>>0;
+  const le=(magic===0xD4C3B2A1||magic===0x4D3CB2A1);
+  const nano=(magic===0xA1B23C4D||magic===0x4D3CB2A1);
+  const linkType=dv.getUint32(20,le);
+  const packets=[];const total=u8.length;
+  let off=24,i=0;
+  while(off+16<=total){
+    const inclLen=dv.getUint32(off+8,le);
+    if(inclLen>0x0FFFFFFF||off+16+inclLen>total)break;
+    const tsSec=dv.getUint32(off,le);
+    const tsFracRaw=dv.getUint32(off+4,le);
+    const origLen=dv.getUint32(off+12,le);
+    packets.push({tsSec,tsFrac:nano?Math.round(tsFracRaw/1000):tsFracRaw,inclLen,origLen,
+      data:u8.subarray(off+16,off+16+inclLen),linkType,le});
+    off+=16+inclLen;
+    if((++i&1023)===0){onProg(off/total);await tick();}
+  }
+  return packets;
+}
+
+/* ================= pcapng ================= */
+async function parsePcapng(buf,u8,onProg){
+  const dv=new DataView(buf);const total=u8.length;
+  let off=0,le=true,count=0;
+  let interfaces=[];const packets=[];
+  while(off+12<=total){
+    const rawType=(((u8[off]<<24)|(u8[off+1]<<16)|(u8[off+2]<<8)|u8[off+3])>>>0);
+    if(rawType===0x0A0D0D0A){ // Section Header Block
+      const bom=(((u8[off+8]<<24)|(u8[off+9]<<16)|(u8[off+10]<<8)|u8[off+11])>>>0);
+      le=(bom===0x4D3C2B1A);
+      const btl=dv.getUint32(off+4,le);
+      if(btl<12||btl%4)break;
+      interfaces=[];off+=btl;continue;
+    }
+    const bt=dv.getUint32(off,le);
+    const btl=dv.getUint32(off+4,le);
+    if(btl<12||btl%4||off+btl>total)break;
+    if(bt===0x00000001){ // Interface Description Block
+      const linkType=dv.getUint16(off+8,le);
+      let tsResolExp=6,tsOffset=0;
+      let o=off+16;const end=off+btl-4;
+      while(o+4<=end){
+        const code=dv.getUint16(o,le),olen=dv.getUint16(o+2,le);
+        if(code===0)break;
+        if(code===9&&olen>=1){const v=u8[o+4];tsResolExp=(v&0x80)?-(v&0x7F):v;}
+        else if(code===14&&olen>=8){tsOffset=Number(dv.getBigInt64(o+4,le));}
+        o+=4+((olen+3)&~3);
+      }
+      interfaces.push({linkType,tsResolExp,tsOffset});
+    }else if(bt===0x00000006){ // Enhanced Packet Block
+      const ifaceId=dv.getUint32(off+8,le);
+      const hi=dv.getUint32(off+12,le),lo=dv.getUint32(off+16,le);
+      const capLen=dv.getUint32(off+20,le),origLen=dv.getUint32(off+24,le);
+      const ifc=interfaces[ifaceId]||interfaces[0]||{linkType:1,tsResolExp:6,tsOffset:0};
+      const raw=hi*4294967296+lo;
+      let secs=ifc.tsResolExp>=0?raw/Math.pow(10,ifc.tsResolExp):raw/Math.pow(2,-ifc.tsResolExp);
+      secs+=ifc.tsOffset;
+      const tsSec=Math.floor(secs);
+      const tsFrac=Math.round((secs-tsSec)*1e6);
+      const ds=off+28;
+      const avail=Math.max(0,Math.min(capLen,total-ds));
+      packets.push({tsSec,tsFrac,inclLen:capLen,origLen,data:u8.subarray(ds,ds+avail),linkType:ifc.linkType,le});
+    }else if(bt===0x00000003){ // Simple Packet Block
+      const origLen=dv.getUint32(off+8,le);
+      const ifc=interfaces[0]||{linkType:1};
+      const capLen=Math.min(origLen,Math.max(0,btl-16));
+      const ds=off+12;
+      packets.push({tsSec:0,tsFrac:0,inclLen:capLen,origLen,data:u8.subarray(ds,ds+capLen),linkType:ifc.linkType,le});
+    }else if(bt===0x00000002){ // eski paket bloğu
+      const ts=dv.getUint32(off+12,le);
+      const capLen=dv.getUint32(off+16,le),origLen=dv.getUint32(off+20,le);
+      const ifc=interfaces[0]||{linkType:1};
+      const ds=off+24;
+      packets.push({tsSec:ts,tsFrac:0,inclLen:capLen,origLen,data:u8.subarray(ds,ds+Math.min(capLen,total-ds)),linkType:ifc.linkType,le});
+    }
+    off+=btl;
+    if((count++&255)===0){onProg(off/total);await tick();}
+  }
+  return packets;
+}
+
+/* ================= protokol çözümleme ================= */
+function decodePacket(p){
+  const u8=p.data;
+  const dec={proto:'Diğer',src:'',dst:'',srcIp:null,dstIp:null,srcPort:undefined,dstPort:undefined,info:'',color:'other',layers:{}};
+  try{
+    const lt=p.linkType??1;
+    if(lt===1)decodeEthernet(u8,0,dec);
+    else if(lt===0){
+      if(u8.length>=4){
+        const fam=p.le?(u8[0]|(u8[1]<<8)|(u8[2]<<16)|(u8[3]<<24)):((u8[0]<<24)|(u8[1]<<16)|(u8[2]<<8)|u8[3]);
+        const f=fam>>>0;
+        if(f===2)decodeIPv4(u8,4,dec);
+        else if(f===23||f===24||f===28||f===30)decodeIPv6(u8,4,dec);
+        else dec.info='Loopback (AF='+f+')';
+      }
+    }else if(lt===101){
+      const v=u8.length?u8[0]>>4:0;
+      if(v===4)decodeIPv4(u8,0,dec);else if(v===6)decodeIPv6(u8,0,dec);
+      else dec.info='Ham IP (sürüm '+v+')';
+    }else if(lt===228)decodeIPv4(u8,0,dec);
+    else if(lt===229)decodeIPv6(u8,0,dec);
+    else if(lt===113){
+      if(u8.length>=16){
+        const proto=(u8[14]<<8)|u8[15];
+        dec.layers.eth={src:'(SLL)',dst:'(SLL)',type:'0x'+proto.toString(16).padStart(4,'0'),typeName:'Linux cooked'};
+        if(proto===0x0800)decodeIPv4(u8,16,dec);
+        else if(proto===0x86DD)decodeIPv6(u8,16,dec);
+        else if(proto===0x0806)decodeARP(u8,16,dec);
+        else dec.info='SLL proto 0x'+proto.toString(16).padStart(4,'0');
+      }
+    }else dec.info='Desteklenmeyen bağlantı katmanı tipi: '+lt;
+  }catch(err){dec.info='Çözümleme hatası: '+err.message;}
+  return dec;
+}
+function decodeEthernet(u8,off,dec){
+  if(u8.length-off<14){dec.info='Kısa Ethernet çerçevesi';return;}
+  const dst=fmtMac(u8,off),src=fmtMac(u8,off+6);
+  let type=(u8[off+12]<<8)|u8[off+13];let p=off+14;let vlan=null;
+  while((type===0x8100||type===0x88A8)&&u8.length-p>=4){
+    vlan={pcp:u8[p]>>5,id:((u8[p]&0x0F)<<8)|u8[p+1]};
+    type=(u8[p+2]<<8)|u8[p+3];p+=4;
+  }
+  dec.layers.eth={src,dst,type:'0x'+type.toString(16).padStart(4,'0'),typeName:ETHERTYPES[type]||'',vlan};
+  dec.src=src;dec.dst=dst;
+  if(type===0x0800)decodeIPv4(u8,p,dec);
+  else if(type===0x86DD)decodeIPv6(u8,p,dec);
+  else if(type===0x0806)decodeARP(u8,p,dec);
+  else{dec.proto='Diğer';dec.info='EtherType 0x'+type.toString(16).padStart(4,'0')+(ETHERTYPES[type]?' ('+ETHERTYPES[type]+')':'');}
+}
+function decodeARP(u8,off,dec){
+  if(u8.length-off<28){dec.info='Kısa ARP paketi';return;}
+  const op=(u8[off+6]<<8)|u8[off+7];
+  const sha=fmtMac(u8,off+8),spa=fmtIp4(u8,off+14),tha=fmtMac(u8,off+18),tpa=fmtIp4(u8,off+24);
+  dec.srcIp=spa;dec.dstIp=tpa;
+  dec.layers.app={opcode:op===1?'İstek (1)':op===2?'Yanıt (2)':String(op),'Gönderen MAC':sha,'Gönderen IP':spa,'Hedef MAC':op===1?'(bilinmiyor)':tha,'Hedef IP':tpa};
+  dec.proto='ARP';dec.color='arp';
+  dec.info=op===1?('Kim '+tpa+' sahip? '+spa+' söylüyor'):op===2?(spa+' → '+sha+' adresinde (yanıt)'):('ARP işlem '+op);
+}
+function decodeIPv4(u8,off,dec){
+  if(u8.length-off<20){dec.info='Kısa IPv4 paketi';return;}
+  dec.proto='IPv4';dec.color='ip';
+  const ihl=(u8[off]&0x0F)*4;
+  const totalLen=(u8[off+2]<<8)|u8[off+3];
+  const id=(u8[off+4]<<8)|u8[off+5];
+  const flagsFrag=(u8[off+6]<<8)|u8[off+7];
+  const flags=flagsFrag>>13,frag=flagsFrag&0x1FFF;
+  const ttl=u8[off+8],proto=u8[off+9];
+  const src=fmtIp4(u8,off+12),dst=fmtIp4(u8,off+16);
+  dec.srcIp=src;dec.dstIp=dst;
+  const flagStr=(flags&0x2?'DF ':'')+(flags&0x1?'MF ':'');
+  dec.layers.net={version:4,src,dst,ttl,proto:IP_PROTOS[proto]||String(proto),protoNum:proto,
+    id:'0x'+id.toString(16).padStart(4,'0'),flags:flagStr.trim()||'—',fragOffset:frag,totalLen,hdrLen:ihl};
+  const end=Math.min(u8.length,off+(totalLen||u8.length-off));
+  if(frag>0){dec.info='IPv4 parçası (frag offset '+frag+')';return;}
+  decodeTransport(u8,off+ihl,end,dec,proto);
+}
+function decodeIPv6(u8,off,dec){
+  if(u8.length-off<40){dec.info='Kısa IPv6 paketi';return;}
+  dec.proto='IPv6';dec.color='ip';
+  const payloadLen=(u8[off+4]<<8)|u8[off+5];
+  let nh=u8[off+6];const hop=u8[off+7];
+  const src=fmtIp6(u8,off+8),dst=fmtIp6(u8,off+24);
+  dec.srcIp=src;dec.dstIp=dst;
+  let p=off+40;const end=Math.min(u8.length,off+40+payloadLen);
+  const exts=[];
+  while(p<end){
+    if(nh===0||nh===43||nh===60){
+      if(p+2>u8.length)break;
+      exts.push({0:'Hop-by-Hop',43:'Routing',60:'Destination'}[nh]);
+      const next=u8[p];const len=(u8[p+1]+1)*8;nh=next;p+=len;
+    }else if(nh===44){
+      if(p+8>u8.length)break;
+      exts.push('Fragment');
+      const next=u8[p];const fragOff=((u8[p+2]<<8)|u8[p+3])>>3;
+      nh=next;p+=8;
+      if(fragOff>0){
+        dec.layers.net={version:6,src,dst,ttl:hop,proto:IP_PROTOS[nh]||nh,exts:exts.join(', ')};
+        dec.info='IPv6 parçası (fragment)';return;
+      }
+    }else break;
+  }
+  dec.layers.net={version:6,src,dst,ttl:hop,proto:IP_PROTOS[nh]||String(nh),protoNum:nh,payloadLen,exts:exts.length?exts.join(', '):undefined};
+  decodeTransport(u8,p,end,dec,nh);
+}
+function decodeTransport(u8,start,end,dec,protoNum){
+  const len=end-start;
+  if(protoNum===6){
+    dec.proto='TCP';dec.color='tcp';
+    if(len<20){dec.info='Kesik TCP başlığı';return;}
+    const sp=(u8[start]<<8)|u8[start+1],dp=(u8[start+2]<<8)|u8[start+3];
+    const seq=u32be(u8,start+4),ack=u32be(u8,start+8);
+    const doff=(u8[start+12]>>4)*4,fb=u8[start+13];
+    const flags=[];
+    if(fb&0x02)flags.push('SYN');if(fb&0x01)flags.push('FIN');if(fb&0x04)flags.push('RST');
+    if(fb&0x08)flags.push('PSH');if(fb&0x10)flags.push('ACK');if(fb&0x20)flags.push('URG');
+    if(fb&0x40)flags.push('ECE');if(fb&0x80)flags.push('CWR');
+    if(u8[start+12]&1)flags.push('NS');
+    const win=(u8[start+14]<<8)|u8[start+15];
+    const payload=u8.subarray(Math.min(start+doff,end),end);
+    dec.srcPort=sp;dec.dstPort=dp;
+    dec.layers.trans={proto:'TCP',srcPort:sp,dstPort:dp,srcService:PORTS[sp]||'',dstService:PORTS[dp]||'',
+      seq,ack,flags:flags.join(', ')||'—',window:win,hdrLen:doff,payloadLen:payload.length};
+    const app=detectApp(payload,sp,dp,false);
+    if(app){dec.proto=app.proto;dec.color=app.color;dec.info=app.info;dec.layers.app=app.layer;}
+    else dec.info='['+(flags.join(', ')||'—')+'] Seq='+seq+' Win='+win+' Len='+payload.length;
+  }else if(protoNum===17){
+    dec.proto='UDP';dec.color='udp';
+    if(len<8){dec.info='Kesik UDP başlığı';return;}
+    const sp=(u8[start]<<8)|u8[start+1],dp=(u8[start+2]<<8)|u8[start+3];
+    const ulen=(u8[start+4]<<8)|u8[start+5];
+    const payload=u8.subarray(Math.min(start+8,end),end);
+    dec.srcPort=sp;dec.dstPort=dp;
+    dec.layers.trans={proto:'UDP',srcPort:sp,dstPort:dp,srcService:PORTS[sp]||'',dstService:PORTS[dp]||'',udpLen:ulen,payloadLen:payload.length};
+    const app=detectApp(payload,sp,dp,true);
+    if(app){dec.proto=app.proto;dec.color=app.color;dec.info=app.info;dec.layers.app=app.layer;}
+    else dec.info='Len='+payload.length;
+  }else if(protoNum===1||protoNum===58){
+    const v6=protoNum===58;
+    dec.proto=v6?'ICMPv6':'ICMP';dec.color='icmp';
+    if(len<4){dec.info='Kesik ICMP';return;}
+    const type=u8[start],code=u8[start+1];
+    const names=v6?ICMP6_TYPES:ICMP_TYPES;
+    let extra='';
+    if(!v6&&(type===8||type===0)&&len>=8)extra=' id=0x'+(((u8[start+4]<<8)|u8[start+5]).toString(16).padStart(4,'0'))+' seq='+((u8[start+6]<<8)|u8[start+7]);
+    if(v6&&(type===128||type===129)&&len>=8)extra=' id='+((u8[start+4]<<8)|u8[start+5])+' seq='+((u8[start+6]<<8)|u8[start+7]);
+    if(v6&&(type===135||type===136)&&len>=24)extra=' hedef='+fmtIp6(u8,start+8);
+    dec.layers.trans={proto:dec.proto,type,code,typeName:names[type]||'Bilinmiyor'};
+    dec.info=(names[type]||('Tip '+type))+(code?' (kod '+code+')':'')+extra;
+  }else if(protoNum===2){dec.proto='IGMP';dec.color='ip';dec.info=len>=8?'IGMP v'+(u8[start]>>4):'IGMP';}
+  else if(protoNum===47){dec.proto='GRE';dec.color='ip';dec.info='GRE tüneli';}
+  else if(protoNum===50){dec.proto='ESP';dec.color='ip';dec.info='IPSec ESP';}
+  else{dec.proto=IP_PROTOS[protoNum]||('IP-'+protoNum);dec.color='ip';dec.info='';}
+}
+
+/* ---- uygulama katmanı ---- */
+function detectApp(payload,sp,dp,isUdp){
+  if(!payload.length)return null;
+  if(sp===53||dp===53){
+    let pl=payload;
+    if(!isUdp&&pl.length>2)pl=pl.subarray(2);
+    const r=parseDNS(pl);
+    if(r)return{proto:'DNS',color:'dns',info:r.info,layer:r.layer};
+  }
+  if(sp===5353||dp===5353){
+    const r=parseDNS(payload);
+    if(r)return{proto:'mDNS',color:'dns',info:r.info,layer:r.layer};
+  }
+  if(isUdp&&(sp===67||dp===67||sp===68||dp===68)){
+    const r=parseDHCP(payload);
+    if(r)return{proto:'DHCP',color:'dhcp',info:r.info,layer:r.layer};
+  }
+  if(!isUdp&&payload.length>6&&payload[0]===0x16&&payload[1]===0x03){
+    const t=parseTLS(payload);
+    if(t)return{proto:'TLS',color:'tls',info:t.info,layer:t.layer};
+  }
+  if(payload.length>10){
+    const h=parseHTTP(payload);
+    if(h)return{proto:'HTTP',color:'http',info:h.info,layer:h.layer};
+  }
+  if(sp===1900||dp===1900){
+    const line=firstLine(payload);
+    if(line)return{proto:'SSDP',color:'http',info:line.slice(0,140),layer:{'İlk Satır':line.slice(0,300)}};
+  }
+  if(sp===123||dp===123){
+    if(payload.length>=48){
+      const vn=(payload[0]>>3)&7,mode=payload[0]&7;
+      const modes={1:'simetrik aktif',2:'simetrik pasif',3:'istemci',4:'sunucu',5:'yayın'};
+      return{proto:'NTP',color:'ntp',info:'NTP v'+vn+', '+(modes[mode]||'mod '+mode)+', stratum '+payload[1],
+        layer:{sürüm:vn,mod:modes[mode]||mode,stratum:payload[1]}};
+    }
+    return{proto:'NTP',color:'ntp',info:'NTP',layer:{}};
+  }
+  const svc=PORTS[dp]??PORTS[sp];
+  if(svc)return{proto:svc,color:'svc',info:svc+' — '+payload.length+' bayt yük',layer:{servis:svc,'Yük Uzunluğu':payload.length+' bayt'}};
+  return null;
+}
+function readDnsName(u8,off){
+  const labels=[];let p=off,jumped=false,next=off,guard=0;
+  while(true){
+    if(p>=u8.length||guard++>128)return null;
+    const b=u8[p];
+    if(b===0){if(!jumped)next=p+1;break;}
+    if((b&0xC0)===0xC0){
+      if(p+1>=u8.length)return null;
+      if(!jumped)next=p+2;
+      p=((b&0x3F)<<8)|u8[p+1];jumped=true;continue;
+    }
+    p++;
+    if(p+b>u8.length)return null;
+    let s='';for(let i=0;i<b;i++){const c=u8[p+i];s+=(c>=32&&c<127)?String.fromCharCode(c):'?';}
+    labels.push(s);p+=b;
+  }
+  return{name:labels.join('.')||'.',next};
+}
+function parseDNS(pl){
+  if(pl.length<12)return null;
+  const id=(pl[0]<<8)|pl[1],flags=(pl[2]<<8)|pl[3];
+  const qr=flags>>15,rcode=flags&0xF;
+  const qd=(pl[4]<<8)|pl[5],an=(pl[6]<<8)|pl[7];
+  let p=12,qname='.',qtype=0;
+  if(qd>0){
+    const r=readDnsName(pl,p);if(!r)return null;
+    qname=r.name;p=r.next;
+    if(p+4<=pl.length){qtype=(pl[p]<<8)|pl[p+1];p+=4;}
+  }
+  const qt=DNS_TYPES[qtype]||('TYPE'+qtype);
+  const layer={id:'0x'+id.toString(16).padStart(4,'0'),qr:qr?'Yanıt':'Sorgu',qname,qtype:qt,qdcount:qd,ancount:an};
+  if(qr===0)return{layer,info:'Sorgu: '+qname+' '+qt};
+  const answers=[];
+  for(let i=0;i<Math.min(an,5)&&p<pl.length;i++){
+    const rn=readDnsName(pl,p);if(!rn)break;p=rn.next;
+    if(p+10>pl.length)break;
+    const atype=(pl[p]<<8)|pl[p+1],rdlen=(pl[p+8]<<8)|pl[p+9];p+=10;
+    if(p+rdlen>pl.length)break;
+    const tn=DNS_TYPES[atype]||('TYPE'+atype);
+    let val='';
+    if(atype===1&&rdlen===4)val=fmtIp4(pl,p);
+    else if(atype===28&&rdlen===16)val=fmtIp6(pl,p);
+    else if(atype===5||atype===2||atype===12){const rr=readDnsName(pl,p);if(rr)val=rr.name;}
+    else if(atype===16&&rdlen>1)val=bytesToText(pl.subarray(p+1,p+rdlen),64);
+    answers.push(rn.name+' '+tn+(val?' '+val:''));
+    p+=rdlen;
+  }
+  const rc=RCODES[rcode]||('RCODE'+rcode);
+  layer.answers=answers;layer.rcode=rc;
+  const first=answers[0]||(qname+' '+qt);
+  return{layer,info:'Yanıt: '+first+(an>1?' (+'+(an-1)+')':'')+' ['+rc+']'};
+}
+function parseHTTP(pl){
+  const head=bytesToText(pl,4096);
+  const line=head.split(/\r?\n/,1)[0];
+  const m=line.match(/^(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|TRACE|CONNECT)\s+(\S+)(?:\s+(HTTP\/[\d.]+))?$/);
+  if(m){
+    const hm=head.match(/\r\nHost:\s*([^\r\n]+)/i);
+    const host=hm?hm[1].trim():'';
+    return{info:m[1]+' '+(host||'')+m[2],layer:{metot:m[1],URI:m[2],Host:host,protokol:m[3]||''}};
+  }
+  const s=line.match(/^(HTTP\/[\d.]+)\s+(\d{3})\s*(.*)$/);
+  if(s)return{info:s[1]+' '+s[2]+' '+s[3],layer:{durum:s[2]+' '+s[3],protokol:s[1]}};
+  return null;
+}
+function parseTLS(pl){
+  if(pl.length<5)return null;
+  const ct=pl[0];
+  if(ct<0x14||ct>0x17)return null;
+  const verName={0:'SSL 3.0',1:'TLS 1.0',2:'TLS 1.1',3:'TLS 1.2'}[pl[2]]||'TLS';
+  if(ct===0x16&&pl.length>=9){
+    const hs=pl[5];
+    if(hs===1){
+      let p=9;p+=2+32;
+      if(p<pl.length)p+=1+pl[p];
+      if(p+2<=pl.length){const cl=(pl[p]<<8)|pl[p+1];p+=2+cl;}
+      if(p<pl.length)p+=1+pl[p];
+      if(p+2<=pl.length){
+        const extTotal=(pl[p]<<8)|pl[p+1];p+=2;
+        const end=Math.min(pl.length,p+extTotal);
+        while(p+4<=end){
+          const et=(pl[p]<<8)|pl[p+1],el=(pl[p+2]<<8)|pl[p+3];p+=4;
+          if(et===0&&el>=5&&p+5<=pl.length){
+            const nl=(pl[p+3]<<8)|pl[p+4];
+            const name=bytesToText(pl.subarray(p+5,p+5+Math.min(nl,255)));
+            return{info:'ClientHello → SNI: '+name,layer:{tür:'ClientHello',sürüm:verName,SNI:name}};
+          }
+          p+=el;
+        }
+      }
+      return{info:'ClientHello ('+verName+')',layer:{tür:'ClientHello',sürüm:verName}};
+    }
+    const hsNames={2:'ServerHello',4:'NewSessionTicket',11:'Certificate',12:'ServerKeyExchange',13:'CertificateRequest',14:'ServerHelloDone',15:'CertificateVerify',16:'ClientKeyExchange',20:'Finished'};
+    const nm=hsNames[hs]||('Handshake('+hs+')');
+    return{info:nm+' ('+verName+')',layer:{tür:nm,sürüm:verName}};
+  }
+  const names={0x14:'Change Cipher Spec',0x15:'Alert',0x17:'Application Data'};
+  return{info:(names[ct]||'TLS')+' ('+verName+')',layer:{tür:names[ct]||ct,sürüm:verName}};
+}
+function parseDHCP(payload){
+  if(payload.length<240)return null;
+  const magic=((payload[236]<<24)|(payload[237]<<16)|(payload[238]<<8)|payload[239])>>>0;
+  if(magic!==0x63825363)return null;
+  const op=payload[0];
+  let p=240,msgType=null;
+  while(p<payload.length){
+    const code=payload[p];
+    if(code===0xFF)break;
+    if(code===0){p++;continue;}
+    if(p+1>=payload.length)break;
+    const len=payload[p+1];
+    if(code===53&&len>=1)msgType=payload[p+2];
+    p+=2+len;
+  }
+  const names={1:'DISCOVER',2:'OFFER',3:'REQUEST',4:'DECLINE',5:'ACK',6:'NAK',7:'RELEASE',8:'INFORM'};
+  const nm=names[msgType]||(op===1?'İstemci İsteği':'Sunucu Yanıtı');
+  return{info:'DHCP '+nm,layer:{mesaj:nm}};
+}
+
+/* ================= çözümleme turu ================= */
+async function decodeAll(packets,onProg){
+  const n=packets.length;
+  state.protoColor=new Map();
+  for(let i=0;i<n;i++){
+    const p=packets[i];
+    p.index=i;
+    p.dec=decodePacket(p);
+    if(!state.protoColor.has(p.dec.proto))state.protoColor.set(p.dec.proto,p.dec.color);
+    if(i>0&&(i&2047)===0){onProg(i/n);await tick();}
+  }
+}
+
+/* ================= istatistik ================= */
+function computeStats(){
+  const proto=new Map(),srcBytes=new Map(),conv=new Map();
+  let bytes=0,first=Infinity,last=-Infinity;
+  const n=state.packets.length;
+  for(let i=0;i<n;i++){
+    const p=state.packets[i],d=p.dec;
+    bytes+=p.inclLen;
+    const t=pktTime(p);
+    if(t<first)first=t;if(t>last)last=t;
+    proto.set(d.proto,(proto.get(d.proto)||0)+1);
+    if(d.srcIp)srcBytes.set(d.srcIp,(srcBytes.get(d.srcIp)||0)+p.inclLen);
+    if(d.srcIp&&d.dstIp){
+      const k=d.srcIp<d.dstIp?d.srcIp+' ⇄ '+d.dstIp:d.dstIp+' ⇄ '+d.srcIp;
+      conv.set(k,(conv.get(k)||0)+1);
+    }
+  }
+  if(!isFinite(first)){first=0;last=0;}
+  const dur=Math.max(0,last-first);
+  const B=28,buckets=new Array(B).fill(0);
+  for(let i=0;i<n;i++){
+    const t=pktTime(state.packets[i]);
+    const idx=dur<=0?0:Math.min(B-1,Math.floor((t-first)/dur*B));
+    buckets[idx]++;
+  }
+  state.stats={bytes,first,last,dur,
+    proto:[...proto.entries()].sort((a,b)=>b[1]-a[1]),
+    talkers:[...srcBytes.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6),
+    convs:[...conv.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6),
+    buckets};
+  state.firstTs=first;
+}
+function card(label,value){return '<div class="stat-card"><div class="s-label">'+label+'</div><div class="s-value">'+value+'</div></div>';}
+function chartRow(name,val,max,color,valText,pct){
+  return '<div class="crow"><span class="cname mono" title="'+escapeHtml(name)+'">'+escapeHtml(name)+'</span>'+
+    '<div class="cbar"><i style="width:'+(val/max*100).toFixed(1)+'%;background:'+color+'"></i></div>'+
+    '<span class="cval">'+valText+(pct!==undefined?'<em>%'+pct+'</em>':'')+'</span></div>';
+}
+function renderStats(){
+  const s=state.stats,n=state.packets.length;
+  const rate=s.dur>0?s.bytes*8/s.dur:0;
+  $('#statCards').innerHTML=card('Paket',n.toLocaleString('tr-TR'))+card('Toplam Veri',fmtBytes(s.bytes))+
+    card('Süre',fmtDur(s.dur))+card('Ort. Hız',fmtRate(rate));
+  const top=s.proto.slice(0,7);
+  const rest=s.proto.slice(7).reduce((a,x)=>a+x[1],0);
+  const rows=[...top];if(rest>0)rows.push(['Diğer',rest]);
+  const maxP=rows.length?rows[0][1]:1;
+  $('#protoChart').innerHTML=rows.map(([p,c])=>
+    chartRow(p,c,maxP,PROTO_HEX[state.protoColor.get(p)||'other']||'#94a3b8',c.toLocaleString('tr-TR'),(c/n*100).toFixed(1))).join('');
+  const maxT=s.talkers.length?s.talkers[0][1]:1;
+  $('#talkChart').innerHTML=s.talkers.length?s.talkers.map(([ip,b])=>
+    chartRow(ip,b,maxT,'#38bdf8',fmtBytes(b))).join(''):'<div class="empty">IP trafiği yok</div>';
+  const maxC=s.convs.length?s.convs[0][1]:1;
+  $('#convChart').innerHTML=s.convs.length?s.convs.map(([k,c])=>
+    chartRow(k,c,maxC,'#a5b4fc',c.toLocaleString('tr-TR')+' paket')).join(''):'<div class="empty">Görüşme yok</div>';
+  const maxB=Math.max(1,...s.buckets);
+  $('#histChart').innerHTML='<div class="hist">'+s.buckets.map(b=>
+    '<div class="hbar" style="height:'+(b/maxB*100).toFixed(1)+'%" title="'+b+' paket"></div>').join('')+
+    '</div><div class="hlabels"><span>0 sn</span><span>'+fmtDur(s.dur)+'</span></div>';
+}
+
+/* ================= tablo / filtre ================= */
+function dispAddr(d,side){
+  const ip=side==='s'?d.srcIp:d.dstIp;
+  const port=side==='s'?d.srcPort:d.dstPort;
+  if(ip)return port!==undefined?ip+':'+port:ip;
+  return side==='s'?(d.src||'—'):(d.dst||'—');
+}
+function applyFilters(){
+  const q=state.query.trim().toLowerCase();
+  const pr=state.protoFilter;
+  state.filtered=[];
+  for(let i=0;i<state.packets.length;i++){
+    const d=state.packets[i].dec;
+    if(pr!=='all'&&d.proto!==pr)continue;
+    if(q){
+      const hay=(d.proto+' '+(d.srcIp||'')+' '+(d.dstIp||'')+' '+(d.srcPort??'')+' '+(d.dstPort??'')+' '+
+        d.info+' '+(d.layers.eth?d.layers.eth.src+' '+d.layers.eth.dst:'')).toLowerCase();
+      if(!hay.includes(q))continue;
+    }
+    state.filtered.push(i);
+  }
+  state.page=0;
+}
+function renderTable(){
+  const tb=$('#tbody');
+  const start=state.page*state.pageSize;
+  const slice=state.filtered.slice(start,start+state.pageSize);
+  if(!slice.length){
+    tb.innerHTML='<tr><td colspan="7" class="empty-row">Filtreyle eşleşen paket yok.</td></tr>';
+  }else{
+    let html='';
+    for(const i of slice){
+      const p=state.packets[i],d=p.dec;
+      html+='<tr data-i="'+i+'" class="c-'+d.color+(i===state.selected?' sel':'')+'">'+
+        '<td class="num">'+(i+1)+'</td>'+
+        '<td class="mono dim">'+fmtAbs(p)+'</td>'+
+        '<td class="mono">'+escapeHtml(dispAddr(d,'s'))+'</td>'+
+        '<td class="mono">'+escapeHtml(dispAddr(d,'d'))+'</td>'+
+        '<td><span class="pill p-'+d.color+'">'+escapeHtml(d.proto)+'</span></td>'+
+        '<td class="num">'+p.inclLen+'</td>'+
+        '<td class="info" title="'+escapeHtml(d.info)+'">'+escapeHtml(d.info)+'</td></tr>';
+    }
+    tb.innerHTML=html;
+  }
+  const pages=Math.max(1,Math.ceil(state.filtered.length/state.pageSize));
+  $('#pgInfo').textContent=(state.page+1)+' / '+pages;
+  $('#countInfo').textContent=state.filtered.length.toLocaleString('tr-TR')+' / '+state.packets.length.toLocaleString('tr-TR')+' paket';
+  $('#pgFirst').disabled=$('#pgPrev').disabled=state.page===0;
+  $('#pgNext').disabled=$('#pgLast').disabled=state.page>=pages-1;
+}
+
+/* ================= ayrıntı paneli ================= */
+function layer(title,obj){
+  const rows=Object.entries(obj).filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>
+    '<div class="kv"><span class="k">'+escapeHtml(k)+'</span><span class="v">'+escapeHtml(String(v))+'</span></div>').join('');
+  return '<details class="layer" open><summary>'+escapeHtml(title)+'</summary><div class="kvs">'+rows+'</div></details>';
+}
+function flatten(o){
+  const out={};
+  for(const[k,v]of Object.entries(o)){
+    if(v===undefined||v===null||v==='')continue;
+    out[LBL[k]||k]=Array.isArray(v)?v.join(' | '):(typeof v==='object'?JSON.stringify(v):v);
+  }
+  return out;
+}
+function hexDump(data){
+  const n=data.length;if(!n)return '(boş)';
+  const out=[];
+  for(let i=0;i<n;i+=16){
+    const end=Math.min(i+16,n);
+    let hex='',asc='';
+    for(let j=i;j<i+16;j++){
+      if(j<end){const b=data[j];hex+=b.toString(16).padStart(2,'0');asc+=(b>=32&&b<127)?String.fromCharCode(b):'·';}
+      else{hex+='  ';asc+=' ';}
+      hex+=(j===i+7)?'  ':' ';
+    }
+    out.push(i.toString(16).padStart(8,'0')+'  '+hex+' '+escapeHtml(asc));
+  }
+  return out.join('\n');
+}
+function renderDetail(){
+  const body=$('#detailBody');
+  const p=state.packets[state.selected];
+  if(!p){
+    $('#detailTitle').textContent='Paket ayrıntısı';
+    body.innerHTML='<div class="empty">Ayrıntılarını görmek için listeden bir paket seçin.<br><br>⌨️ ↑ / ↓ tuşlarıyla paketler arasında gezinebilirsiniz.</div>';
+    return;
+  }
+  const d=p.dec,L=d.layers;
+  $('#detailTitle').innerHTML='Paket <b>#'+(p.index+1)+'</b> <span class="pill p-'+d.color+'">'+escapeHtml(d.proto)+'</span>';
+  const prev=state.packets[p.index-1];
+  const delta=prev?((pktTime(p)-pktTime(prev)).toFixed(6))+' sn':'— (ilk paket)';
+  let tree='';
+  tree+=layer('Çerçeve (Frame)',{
+    'Paket No':p.index+1,'Yakalanan Uzunluk':p.inclLen+' bayt','Gerçek Uzunluk':p.origLen+' bayt',
+    'Zaman (mutlak)':fmtFull(p),'Zaman (göreceli)':fmtRel(p)+' sn','Önceki Paketten Δ':delta
+  });
+  if(L.eth){
+    const e={'Kaynak MAC':L.eth.src,'Hedef MAC':L.eth.dst,'Tip':L.eth.type+(L.eth.typeName?' ('+L.eth.typeName+')':'')};
+    if(L.eth.vlan)e['VLAN ID']=L.eth.vlan.id;
+    tree+=layer('Ethernet II',e);
+  }
+  if(L.net){
+    const n=L.net,o={'Sürüm':'IPv'+n.version,'Kaynak':n.src,'Hedef':n.dst};
+    if(n.ttl!==undefined)o['TTL / Hop Limit']=n.ttl;
+    if(n.proto!==undefined)o['Taşıma Protokolü']=n.proto;
+    if(n.id)o['Paket ID']=n.id;
+    if(n.flags&&n.flags!=='—')o['Bayraklar']=n.flags;
+    if(n.totalLen)o['Toplam Uzunluk']=n.totalLen+' bayt';
+    if(n.payloadLen!==undefined)o['Yük Uzunluğu']=n.payloadLen+' bayt';
+    if(n.hdrLen)o['Başlık Uzunluğu']=n.hdrLen+' bayt';
+    if(n.exts)o['Uzantı Başlıkları']=n.exts;
+    tree+=layer(n.version===6?'IPv6':'IPv4',o);
+  }
+  if(L.trans){
+    const t=L.trans,o={};
+    if(t.srcPort!==undefined){
+      o['Kaynak Port']=t.srcPort+(t.srcService?' ('+t.srcService+')':'');
+      o['Hedef Port']=t.dstPort+(t.dstService?' ('+t.dstService+')':'');
+    }
+    if(t.seq!==undefined)o['Sıra No (Seq)']=t.seq;
+    if(t.ack!==undefined)o['Onay (Ack)']=t.ack;
+    if(t.flags)o['Bayraklar']=t.flags;
+    if(t.window!==undefined)o['Pencere Boyutu']=t.window;
+    if(t.hdrLen)o['Başlık Uzunluğu']=t.hdrLen+' bayt';
+    if(t.udpLen!==undefined)o['UDP Uzunluğu']=t.udpLen+' bayt';
+    if(t.payloadLen!==undefined)o['Yük Uzunluğu']=t.payloadLen+' bayt';
+    if(t.type!==undefined){o['Tip']=t.type+(t.typeName?' — '+t.typeName:'');o['Kod']=t.code;}
+    tree+=layer(t.proto,o);
+  }
+  if(L.app)tree+=layer('Uygulama — '+d.proto,flatten(L.app));
+  body.innerHTML=
+    '<div class="tabpane'+(state.tab==='tree'?' active':'')+'" data-pane="tree">'+
+      (tree||'<div class="empty">Katman bilgisi çözümlenemedi.</div>')+'</div>'+
+    '<div class="tabpane'+(state.tab==='hex'?' active':'')+'" data-pane="hex"><pre class="hexdump">'+hexDump(p.data)+'</pre></div>';
+}
+function setTab(name){
+  state.tab=name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('active',p.dataset.pane===name));
+}
+function selectPacket(i,scroll){
+  state.selected=i;
+  const prev=$('#tbody tr.sel');if(prev)prev.classList.remove('sel');
+  const cur=document.querySelector('#tbody tr[data-i="'+i+'"]');
+  if(cur)cur.classList.add('sel');
+  renderDetail();
+  if(scroll&&cur)cur.scrollIntoView({block:'nearest'});
+}
+
+/* ================= dışa aktarma ================= */
+function baseName(){return state.fileName.replace(/\.(pcap|cap|pcapng|gz|dmp)(\.gz)?$/i,'')||'yakalama';}
+function exportCSV(){
+  if(!state.packets.length)return;
+  const lines=[['No','Zaman','Kaynak','Hedef','Protokol','Boyut','Bilgi'].join(';')];
+  for(const i of state.filtered){
+    const p=state.packets[i],d=p.dec;
+    const cells=[i+1,fmtFull(p),dispAddr(d,'s'),dispAddr(d,'d'),d.proto,p.inclLen,d.info];
+    lines.push(cells.map(c=>{c=String(c);if(/[;"\n]/.test(c))c='"'+c.replace(/"/g,'""')+'"';return c;}).join(';'));
+  }
+  download('\uFEFF'+lines.join('\r\n'),'text/csv;charset=utf-8',baseName()+'.csv');
+  toast('CSV indirildi ('+state.filtered.length.toLocaleString('tr-TR')+' paket).','ok');
+}
+function exportJSON(){
+  if(!state.packets.length)return;
+  const s=state.stats;
+  const obj={
+    file:{name:state.fileName,size:state.fileSize,format:state.fileType},
+    summary:{packetCount:state.packets.length,totalBytes:s.bytes,durationSeconds:+s.dur.toFixed(6),
+      protocols:Object.fromEntries(s.proto)},
+    packets:state.filtered.map(i=>{
+      const p=state.packets[i],d=p.dec;
+      return{no:i+1,time:fmtFull(p),source:dispAddr(d,'s'),destination:dispAddr(d,'d'),
+        protocol:d.proto,length:p.inclLen,info:d.info};
+    })
+  };
+  download(JSON.stringify(obj,null,2),'application/json',baseName()+'.json');
+  toast('JSON indirildi.','ok');
+}
+function exportTXT(){
+  if(!state.packets.length)return;
+  const s=state.stats,n=state.packets.length,L=[];
+  L.push('════════════════════════════════════════════════');
+  L.push('  PCAP OKUNABİLİR RAPOR — PcapView');
+  L.push('════════════════════════════════════════════════');
+  L.push('Dosya        : '+state.fileName);
+  L.push('Boyut        : '+fmtBytes(state.fileSize));
+  L.push('Biçim        : '+state.fileType);
+  L.push('Paket Sayısı : '+n.toLocaleString('tr-TR'));
+  L.push('Toplam Veri  : '+fmtBytes(s.bytes));
+  L.push('Süre         : '+fmtDur(s.dur));
+  L.push('Oluşturuldu  : '+new Date().toLocaleString('tr-TR'));
+  L.push('');
+  L.push('PROTOKOL DAĞILIMI');L.push('─────────────────────────────');
+  for(const[p,c]of s.proto)L.push('  '+p.padEnd(14)+String(c).padStart(8)+'   %'+(c/n*100).toFixed(1));
+  L.push('');
+  L.push('EN ÇOK KONUŞANLAR (bayt)');L.push('─────────────────────────────');
+  for(const[ip,b]of s.talkers)L.push('  '+ip.padEnd(20)+fmtBytes(b).padStart(10));
+  L.push('');
+  L.push('PAKET LİSTESİ — '+state.filtered.length.toLocaleString('tr-TR')+' paket (uygulanan filtreyle)');
+  L.push('─'.repeat(130));
+  for(const i of state.filtered){
+    const p=state.packets[i],d=p.dec;
+    L.push('#'+String(i+1).padStart(6)+'  '+fmtAbs(p)+'  '+dispAddr(d,'s').padEnd(24)+' → '+
+      dispAddr(d,'d').padEnd(24)+' '+d.proto.padEnd(9)+String(p.inclLen).padStart(6)+' B  '+d.info);
+  }
+  download('\uFEFF'+L.join('\r\n'),'text/plain;charset=utf-8',baseName()+'.rapor.txt');
+  toast('TXT rapor indirildi.','ok');
+}
+
+/* ================= dosya yükleme ================= */
+async function loadFile(file){
+  try{
+    showProgress('Dosya okunuyor…',5);
+    let buf=await file.arrayBuffer();
+    let u8=new Uint8Array(buf);
+    if(u8.length>2&&u8[0]===0x1F&&u8[1]===0x8B){
+      if(typeof DecompressionStream==='undefined')throw new Error('Bu tarayıcı gzip açmayı desteklemiyor.');
+      showProgress('Gzip arşivi açılıyor…',10);
+      const ds=new DecompressionStream('gzip');
+      buf=await new Response(new Blob([buf]).stream().pipeThrough(ds)).arrayBuffer();
+      u8=new Uint8Array(buf);
+    }
+    const kind=detectFormat(u8);
+    if(!kind)throw new Error('Desteklenmeyen dosya biçimi. Lütfen .pcap, .cap veya .pcapng dosyası seçin.');
+    state.fileType=kind;
+    const prog=f=>showProgress('Paketler okunuyor… %'+Math.round(10+f*55),10+f*55);
+    const packets=kind==='pcap'?await parsePcap(buf,u8,prog):await parsePcapng(buf,u8,prog);
+    if(!packets.length)throw new Error('Dosyada çözümlenebilir paket bulunamadı.');
+    showProgress('Protokoller çözümleniyor…',70);
+    await decodeAll(packets,f=>showProgress('Protokoller çözümleniyor… %'+Math.round(70+f*25),70+f*25));
+    showProgress('İstatistikler hazırlanıyor…',97);
+    await tick();
+    state.packets=packets;
+    state.fileName=file.name;state.fileSize=file.size;
+    state.selected=-1;state.query='';state.protoFilter='all';state.page=0;
+    $('#search').value='';
+    computeStats();
+    buildProtoSelect();
+    applyFilters();
+    renderStats();
+    renderTable();
+    renderDetail();
+    showWorkspace(true);
+    hideProgress();
+    toast(packets.length.toLocaleString('tr-TR')+' paket başarıyla çözümlendi.','ok');
+  }catch(err){
+    hideProgress();
+    toast('Hata: '+err.message,'err');
+    console.error(err);
+  }
+}
+function buildProtoSelect(){
+  $('#protoSel').innerHTML='<option value="all">Tüm Protokoller</option>'+
+    state.stats.proto.map(([p,c])=>'<option value="'+escapeHtml(p)+'">'+escapeHtml(p)+' ('+c.toLocaleString('tr-TR')+')</option>').join('');
+}
+function showWorkspace(on){
+  $('#dropzone').hidden=on;
+  $('#workspace').hidden=!on;
+  $('#filebar').hidden=!on;
+  if(on){
+    $('#fName').textContent=state.fileName;
+    $('#fMeta').textContent=fmtBytes(state.fileSize)+' • '+state.fileType+' • '+
+      state.packets.length.toLocaleString('tr-TR')+' paket • '+fmtDur(state.stats.dur);
+  }
+}
+
+/* ================= örnek pcap üretici ================= */
+function _u8(...v){return new Uint8Array(v);}
+function _h16(v){return new Uint8Array([v>>8,v&0xFF]);}
+function _h32(v){return new Uint8Array([v>>>24,(v>>>16)&0xFF,(v>>>8)&0xFF,v&0xFF]);}
+function _macB(s){return new Uint8Array(s.split(':').map(x=>parseInt(x,16)));}
+function _ipB(s){return new Uint8Array(s.split('.').map(Number));}
+function _txt(s){return new TextEncoder().encode(s);}
+function _concat(arrs){const n=arrs.reduce((s,a)=>s+a.length,0);const o=new Uint8Array(n);let p=0;for(const a of arrs){o.set(a,p);p+=a.length;}return o;}
+function _eth(dst,src,type,payload){return _concat([_macB(dst),_macB(src),_h16(parseInt(type,16)),payload]);}
+function _ipv4(src,dst,proto,payload){
+  return _concat([_u8(0x45,0),_h16(20+payload.length),_h16(Math.floor(Math.random()*65535)),_h16(0x4000),_u8(64,proto),_h16(0),_ipB(src),_ipB(dst),payload]);
+}
+function _tcp(sp,dp,flags,seq,ack,win,payload){
+  const pl=payload||new Uint8Array(0);
+  return _concat([_h16(sp),_h16(dp),_h32(seq),_h32(ack),_u8(0x50,flags),_h16(win),_h16(0),_h16(0),pl]);
+}
+function _udp(sp,dp,payload){return _concat([_h16(sp),_h16(dp),_h16(8+payload.length),_h16(0),payload]);}
+function _icmpEcho(type,code,id,seq){return _concat([_u8(type,code),_h16(0),_h16(id),_h16(seq),_txt('PcapViewPing0123456789')]);}
+function _dnsName(name){const out=[];for(const p of name.split('.')){out.push(_u8(p.length),_txt(p));}out.push(_u8(0));return _concat(out);}
+function _dnsQuery(id,name,qtype){return _concat([_h16(id),_h16(0x0100),_h16(1),_h16(0),_h16(0),_h16(0),_dnsName(name),_h16(qtype),_h16(1)]);}
+function _dnsResp(id,name,qtype,ip){
+  const q=_concat([_dnsName(name),_h16(qtype),_h16(1)]);
+  const ans=_concat([_u8(0xC0,0x0C),_h16(qtype),_h16(1),_h32(300),_h16(4),_ipB(ip)]);
+  return _concat([_h16(id),_h16(0x8180),_h16(1),_h16(1),_h16(0),_h16(0),q,ans]);
+}
+function _tlsClientHello(sni){
+  const sniBytes=_txt(sni);
+  const sniExt=_concat([_h16(0),_h16(sniBytes.length+5),_h16(sniBytes.length+3),_u8(0),_h16(sniBytes.length),sniBytes]);
+  const exts=_concat([_h16(sniExt.length),sniExt]);
+  const hello=_concat([_h16(0x0303),new Uint8Array(32),_u8(0),_h16(2),_h16(0x1301),_u8(1,0),exts]);
+  const hs=_concat([_u8(1),_u8(0,(hello.length>>8)&0xFF,hello.length&0xFF),hello]);
+  return _concat([_u8(0x16,0x03,0x01),_h16(hs.length),hs]);
+}
+function _dhcpDiscover(){
+  const b=new Uint8Array(244);
+  b[0]=1;b[1]=1;b[2]=6;b[10]=0x80;
+  b[4]=0xDE;b[5]=0xAD;b[6]=0xBE;b[7]=0xEF;
+  _macB('a4:5e:60:bf:7c:21').forEach((v,i)=>b[28+i]=v);
+  b[236]=0x63;b[237]=0x82;b[238]=0x53;b[239]=0x63;
+  b[240]=53;b[241]=1;b[242]=1;b[243]=0xFF;
+  return b;
+}
+function buildSamplePcap(){
+  const pkts=[];
+  const t0=Math.floor(Date.now()/1000)-45;
+  let ms=0;
+  const push=data=>{pkts.push({tsSec:t0+Math.floor(ms/1000),tsUsec:Math.floor(ms%1000)*1000,data});ms+=Math.random()*350+40;};
+  const C={client:'a4:5e:60:bf:7c:21',gw:'b8:27:eb:5f:19:02'};
+  const IP={client:'192.168.1.50',gw:'192.168.1.1',dns:'8.8.8.8',web:'93.184.216.34'};
+  push(_eth('ff:ff:ff:ff:ff:ff',C.client,'0806',_concat([_h16(1),_h16(0x0800),_u8(6),_u8(4),_h16(1),_macB(C.client),_ipB(IP.client),_macB('00:00:00:00:00:00'),_ipB(IP.gw)])));
+  push(_eth(C.client,C.gw,'0806',_concat([_h16(1),_h16(0x0800),_u8(6),_u8(4),_h16(2),_macB(C.gw),_ipB(IP.gw),_macB(C.client),_ipB(IP.client)])));
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,IP.dns,17,_udp(53535,53,_dnsQuery(0x1234,'www.example.com',1)))));
+  push(_eth(C.client,C.gw,'0800',_ipv4(IP.dns,IP.client,17,_udp(53,53535,_dnsResp(0x1234,'www.example.com',1,'93.184.216.34')))));
+  const cSeq=1000,sSeq=5000;
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,IP.web,6,_tcp(51234,80,0x02,cSeq,0,64240,null))));
+  push(_eth(C.client,C.gw,'0800',_ipv4(IP.web,IP.client,6,_tcp(80,51234,0x12,sSeq,cSeq+1,65160,null))));
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,IP.web,6,_tcp(51234,80,0x10,cSeq+1,sSeq+1,64240,null))));
+  const get=_txt('GET /index.html HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: PcapView/1.0\r\nAccept: */*\r\n\r\n');
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,IP.web,6,_tcp(51234,80,0x18,cSeq+1,sSeq+1,64240,get))));
+  const body='<html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>Bu alan adı örnekler için kullanılır.</p></body></html>';
+  const resp=_txt('HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: '+_txt(body).length+'\r\nServer: ECAcc\r\n\r\n'+body);
+  push(_eth(C.client,C.gw,'0800',_ipv4(IP.web,IP.client,6,_tcp(80,51234,0x18,sSeq+1,cSeq+1+get.length,65160,resp))));
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,'142.250.186.110',6,_tcp(51240,443,0x18,7777,1,64240,_tlsClientHello('www.google.com')))));
+  push(_eth(C.gw,C.client,'0800',_ipv4(IP.client,IP.dns,1,_icmpEcho(8,0,1,1))));
+  push(_eth(C.client,C.gw,'0800',_ipv4(IP.dns,IP.client,1,_icmpEcho(0,0,1,1))));
+  push(_eth('ff:ff:ff:ff:ff:ff',C.client,'0800',_ipv4('0.0.0.0','255.255.255.255',17,_udp(68,67,_dhcpDiscover()))));
+  const total=24+pkts.reduce((s,p)=>s+16+p.data.length,0);
+  const buf=new Uint8Array(total);const dv=new DataView(buf.buffer);
+  dv.setUint32(0,0xA1B2C3D4);dv.setUint16(4,2);dv.setUint16(6,4);
+  dv.setInt32(8,0);dv.setUint32(12,0);dv.setUint32(16,262144);dv.setUint32(20,1);
+  let off=24;
+  for(const p of pkts){
+    dv.setUint32(off,p.tsSec);dv.setUint32(off+4,p.tsUsec);
+    dv.setUint32(off+8,p.data.length);dv.setUint32(off+12,p.data.length);
+    buf.set(p.data,off+16);off+=16+p.data.length;
+  }
+  return buf.buffer;
+}
+
+/* ================= olaylar ================= */
+$('#dropzone').addEventListener('click',e=>{
+  if(e.target.closest('button'))return;
+  $('#fileInput').click();
+});
+$('#btnBrowse').addEventListener('click',e=>{e.stopPropagation();$('#fileInput').click();});
+$('#fileInput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+$('#btnSample').addEventListener('click',e=>{
+  e.stopPropagation();
+  loadFile(new File([buildSamplePcap()],'ornek-yakalama.pcap',{type:'application/vnd.tcpdump.pcap'}));
+});
+$('#btnNew').addEventListener('click',()=>{showWorkspace(false);$('#fileInput').value='';});
+
+let dragDepth=0;
+function hasFiles(e){return e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');}
+window.addEventListener('dragenter',e=>{if(hasFiles(e)){dragDepth++;$('#dragOverlay').hidden=false;}});
+window.addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;$('#dragOverlay').hidden=true;}});
+window.addEventListener('dragover',e=>{if(hasFiles(e))e.preventDefault();});
+window.addEventListener('drop',e=>{
+  if(!hasFiles(e))return;
+  e.preventDefault();dragDepth=0;$('#dragOverlay').hidden=true;
+  const f=e.dataTransfer.files[0];
+  if(f)loadFile(f);
+});
+
+let searchTimer;
+$('#search').addEventListener('input',e=>{
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{state.query=e.target.value;applyFilters();renderTable();},160);
+});
+$('#protoSel').addEventListener('change',e=>{state.protoFilter=e.target.value;applyFilters();renderTable();});
+$('#sizeSel').addEventListener('change',e=>{state.pageSize=+e.target.value;state.page=0;renderTable();});
+
+function pageCount(){return Math.max(1,Math.ceil(state.filtered.length/state.pageSize));}
+$('#pgFirst').addEventListener('click',()=>{state.page=0;renderTable();});
+$('#pgPrev').addEventListener('click',()=>{state.page=Math.max(0,state.page-1);renderTable();});
+$('#pgNext').addEventListener('click',()=>{state.page=Math.min(pageCount()-1,state.page+1);renderTable();});
+$('#pgLast').addEventListener('click',()=>{state.page=pageCount()-1;renderTable();});
+
+$('#tbody').addEventListener('click',e=>{
+  const tr=e.target.closest('tr[data-i]');
+  if(tr)selectPacket(+tr.dataset.i);
+});
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setTab(t.dataset.tab)));
+
+$('#btnStats').addEventListener('click',()=>{
+  const p=$('#statsPanel');
+  p.hidden=!p.hidden;
+  $('#btnStats').textContent=p.hidden?'📊 İstatistiği Göster':'📊 İstatistik';
+});
+$('#btnCsv').addEventListener('click',exportCSV);
+$('#btnJson').addEventListener('click',exportJSON);
+$('#btnTxt').addEventListener('click',exportTXT);
+
+document.addEventListener('keydown',e=>{
+  if($('#workspace').hidden)return;
+  if(e.target.matches('input,select,textarea'))return;
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;
+  e.preventDefault();
+  const f=state.filtered;if(!f.length)return;
+  let pos=f.indexOf(state.selected);
+  pos=e.key==='ArrowDown'?Math.min(f.length-1,pos+1):Math.max(0,pos<0?0:pos-1);
+  const i=f[pos];
+  const pg=Math.floor(pos/state.pageSize);
+  if(pg!==state.page){state.page=pg;renderTable();}
+  selectPacket(i,true);
+});
+</script>
+</body>
+</html>
