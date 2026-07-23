@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebAPK Studio — HTML · CSS · JS → Android APK</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.20/latin-400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.20/latin-500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.20/latin-600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.20/latin-700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.20/latin-800.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.21/latin-400.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['"JetBrains Mono"','ui-monospace','monospace'] },
+    keyframes: { rise: { from:{opacity:'0',transform:'translateY(10px)'}, to:{opacity:'1',transform:'translateY(0)'} },
+                 pop: { from:{opacity:'0',transform:'scale(.96)'}, to:{opacity:'1',transform:'scale(1)'} } },
+    animation: { rise: 'rise .35s ease both', pop: 'pop .25s ease both' }
+  }}
+};
+</script>
+<style>
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:8px;border:2px solid #020617}
+  ::-webkit-scrollbar-thumb:hover{background:#475569}
+  html{scroll-behavior:smooth}
+  .glow{box-shadow:0 0 40px -10px rgba(99,102,241,.55)}
+  .card{background:rgba(15,23,42,.72);border:1px solid rgba(148,163,184,.12);backdrop-filter:blur(8px)}
+  input[type=color]{-webkit-appearance:none;appearance:none;border:none;padding:0;background:none;cursor:pointer}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  input[type=color]::-webkit-color-swatch{border:2px solid rgba(255,255,255,.2);border-radius:12px}
+  .fld{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:8px 12px;font-size:13px;color:#e2e8f0;width:100%;outline:none;transition:border .15s, box-shadow .15s}
+  .fld:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+  .fld.bad{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+  .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin-bottom:5px;display:block}
+  .tree-row:hover .del-btn{opacity:1}
+  .del-btn{opacity:0;transition:opacity .15s}
+  pre{font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans min-h-screen">
+
+<div class="fixed inset-0 pointer-events-none overflow-hidden">
+  <div class="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-indigo-600/20 blur-[130px]"></div>
+  <div class="absolute top-1/3 -right-40 w-[420px] h-[420px] rounded-full bg-fuchsia-600/10 blur-[130px]"></div>
+  <div class="absolute bottom-0 left-1/3 w-[380px] h-[380px] rounded-full bg-emerald-600/10 blur-[130px]"></div>
+</div>
+
+<header class="sticky top-0 z-40 border-b border-white/5 bg-slate-950/75 backdrop-blur-xl">
+  <div class="max-w-[1440px] mx-auto px-4 lg:px-6 h-16 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center glow shrink-0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+    </div>
+    <div class="min-w-0">
+      <h1 class="font-extrabold text-[15px] leading-tight tracking-tight">WebAPK <span class="bg-gradient-to-r from-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">Studio</span></h1>
+      <p class="text-[11px] text-slate-400 leading-tight hidden sm:block">HTML · CSS · JS klasörünü Android APK projesine dönüştür</p>
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> %100 tarayıcıda çalışır
+      </span>
+      <button id="btnSample" class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/></svg> Örnek Proje
+      </button>
+      <button id="btnHelp" class="text-xs font-semibold px-3.5 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg> Yardım
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="relative max-w-[1440px] mx-auto px-4 lg:px-6 py-6 pb-32 grid grid-cols-1 xl:grid-cols-[390px_1fr] gap-6">
+
+  <aside class="space-y-5 xl:sticky xl:top-24 xl:self-start xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pr-1">
+
+    <section class="card rounded-2xl p-5 animate-rise">
+      <h2 class="flex items-center gap-2 text-sm font-bold mb-4">
+        <span class="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-300 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>
+        Uygulama Kimliği
+      </h2>
+      <div class="space-y-3.5">
+        <div>
+          <label class="lbl" for="appName">Uygulama Adı</label>
+          <input id="appName" class="fld" type="text" value="Uygulamam" maxlength="30">
+        </div>
+        <div>
+          <label class="lbl" for="appPkg">Paket Adı <span class="normal-case text-slate-500">(applicationId)</span></label>
+          <div class="flex gap-2">
+            <input id="appPkg" class="fld flex-1 font-mono !text-[12px]" type="text" value="com.example.uygulamam" spellcheck="false">
+            <button id="btnPkgAuto" title="Addan otomatik üret" class="shrink-0 w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 transition">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            </button>
+          </div>
+          <p id="pkgHint" class="text-[11px] mt-1 text-slate-500">Örn: com.sirket.uygulama</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="lbl" for="appVName">Sürüm Adı</label>
+            <input id="appVName" class="fld font-mono !text-[12px]" type="text" value="1.0.0">
+          </div>
+          <div>
+            <label class="lbl" for="appVCode">Sürüm Kodu</label>
+            <input id="appVCode" class="fld font-mono !text-[12px]" type="number" min="1" value="1">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card rounded-2xl p-5 animate-rise">
+      <h2 class="flex items-center gap-2 text-sm font-bold mb-4">
+        <span class="w-7 h-7 rounded-lg bg-fuchsia-500/15 text-fuchsia-300 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></span>
+        Görünüm &amp; İkon
+      </h2>
+      <div class="flex items-center gap-4 mb-4">
+        <canvas id="iconPreview" width="80" height="80" class="w-20 h-20 rounded-2xl border border-white/10 shadow-lg shrink-0"></canvas>
+        <div class="flex flex-col gap-2 min-w-0">
+          <button id="btnIconUpload" class="text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white transition flex items-center justify-center gap-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> İkon Yükle
+          </button>
+          <button id="btnIconReset" class="text-xs font-semibold px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition">Otomatik İkon Üret</button>
+          <p class="text-[10px] text-slate-500 leading-tight">PNG · kare önerilir. Yoksa addan otomatik üretilir.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="lbl" for="colTheme">Tema</label>
+          <input id="colTheme" type="color" value="#6366f1" class="w-full h-10">
+        </div>
+        <div>
+          <label class="lbl" for="colStatus">Durum Çubuğu</label>
+          <input id="colStatus" type="color" value="#4338ca" class="w-full h-10">
+        </div>
+        <div>
+          <label class="lbl" for="colSplash">Splash</label>
+          <input id="colSplash" type="color" value="#0f172a" class="w-full h-10">
+        </div>
+      </div>
+    </section>
+
+    <section class="card rounded-2xl p-5 animate-rise">
+      <h2 class="flex items-center gap-2 text-sm font-bold mb-4">
+        <span class="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+        Davranış
+      </h2>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="lbl" for="selEntry">Giriş Sayfası</label>
+          <select id="selEntry" class="fld font-mono !text-[11px]"></select>
+        </div>
+        <div>
+          <label class="lbl" for="selOrient">Yönelim</label>
+          <select id="selOrient" class="fld">
+            <option value="unspecified">Otomatik</option>
+            <option value="portrait">Portre</option>
+            <option value="landscape">Yatay</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="lbl" for="selMinSdk">Minimum Android (minSdk)</label>
+          <select id="selMinSdk" class="fld">
+            <option value="21">21 — Android 5.0 (Lollipop)</option>
+            <option value="23">23 — Android 6.0 (Marshmallow)</option>
+            <option value="24" selected>24 — Android 7.0 (Nougat)</option>
+            <option value="26">26 — Android 8.0 (Oreo)</option>
+            <option value="28">28 — Android 9.0 (Pie)</option>
+            <option value="30">30 — Android 11</option>
+            <option value="33">33 — Android 13</option>
+          </select>
+        </div>
+      </div>
+      <div class="space-y-1 divide-y divide-white/5">
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">Tam ekran (immersif)</span>
+          <input type="checkbox" id="optFullscreen" class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">Ekran açık kalsın</span>
+          <input type="checkbox" id="optKeepOn" class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">Yakınlaştırmaya izin ver</span>
+          <input type="checkbox" id="optZoom" class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">Bağlantıları uygulama içinde aç</span>
+          <input type="checkbox" id="optInternal" checked class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">HTTP (cleartext) trafiğine izin ver</span>
+          <input type="checkbox" id="optCleartext" class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+        <label class="flex items-center justify-between gap-3 cursor-pointer py-2">
+          <span class="text-[13px] text-slate-300">Çevrimdışı destek <span class="text-[10px] text-slate-500">(PWA + Service Worker)</span></span>
+          <input type="checkbox" id="optOffline" checked class="peer sr-only">
+          <span class="w-10 h-6 rounded-full bg-slate-700 peer-checked:bg-indigo-500 relative transition-colors shrink-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card rounded-2xl p-5 animate-rise">
+      <h2 class="flex items-center gap-2 text-sm font-bold mb-4">
+        <span class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        Android İzinleri
+      </h2>
+      <div id="permGrid" class="grid grid-cols-2 gap-x-3 gap-y-2.5"></div>
+      <p class="text-[10px] text-slate-500 mt-3">INTERNET izni her zaman eklenir.</p>
+    </section>
+  </aside>
+
+  <section class="min-w-0">
+    <div class="flex items-center gap-1.5 mb-4 bg-slate-900/70 border border-white/5 rounded-2xl p-1.5 w-fit max-w-full overflow-x-auto">
+      <button data-tab="files" class="tab-btn px-4 py-2 rounded-xl text-[13px] font-semibold transition whitespace-nowrap">📁 Dosyalar</button>
+      <button data-tab="preview" class="tab-btn px-4 py-2 rounded-xl text-[13px] font-semibold transition whitespace-nowrap">📱 Önizleme</button>
+      <button data-tab="out" class="tab-btn px-4 py-2 rounded-xl text-[13px] font-semibold transition whitespace-nowrap">📦 Çıktı</button>
+    </div>
+
+    <div id="panel-files" class="tab-panel">
+      <div id="dropZone" class="card rounded-2xl border-2 border-dashed !border-slate-700 hover:!border-indigo-500/60 transition-colors p-8 text-center cursor-pointer group">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6M9 13l3-3 3 3"/></svg>
+        </div>
+        <p class="font-bold text-sm">Web sitesi klasörünü buraya sürükle</p>
+        <p class="text-xs text-slate-400 mt-1">index.html, style.css, app.js … tüm klasör yapısı korunur</p>
+        <div class="flex justify-center gap-2 mt-4">
+          <button id="btnPickFolder" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white transition">Klasör Seç</button>
+          <button id="btnPickFiles" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition">Dosya Ekle</button>
+        </div>
+      </div>
+
+      <div class="card rounded-2xl mt-4 overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span class="text-[13px] font-bold">Dosya Ağacı</span>
+          <span id="fileCountChip" class="text-[10px] font-semibold bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-slate-400">0 dosya</span>
+          <button id="btnClear" class="ml-auto text-[11px] font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 rounded-lg px-2 py-1 transition">Tümünü Temizle</button>
+        </div>
+        <div id="fileTree" class="p-3 max-h-[420px] overflow-y-auto text-[13px]">
+          <p class="text-slate-500 text-xs text-center py-8">Henüz dosya eklenmedi.<br>Yukarıdan klasör sürükle veya <button class="text-indigo-300 underline" onclick="loadSample()">örnek projeyi</button> dene.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-preview" class="tab-panel hidden">
+      <div class="card rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-4 flex-wrap">
+          <span class="text-[13px] font-bold">Canlı Önizleme</span>
+          <span id="prevEntryChip" class="text-[10px] font-mono bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-slate-400">—</span>
+          <div class="ml-auto flex gap-2">
+            <button id="btnPrevRefresh" class="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Yenile
+            </button>
+            <button id="btnPrevOpen" class="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition">Yeni Sekmede Aç</button>
+          </div>
+        </div>
+        <div class="flex justify-center">
+          <div class="relative w-[330px] h-[660px] rounded-[2.6rem] border-[6px] border-slate-800 bg-slate-800 shadow-2xl overflow-hidden">
+            <div class="absolute top-0 inset-x-0 z-10 h-8 bg-gradient-to-b from-black/80 to-black/40 flex items-center justify-between px-6 text-[10px] font-semibold text-white">
+              <span id="phoneClock">12:30</span>
+              <div class="absolute left-1/2 -translate-x-1/2 top-1.5 w-20 h-4 bg-black rounded-full"></div>
+              <span class="flex items-center gap-1">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M2 22h20V2L2 22z"/></svg>
+                <span class="inline-block w-5 h-2.5 border border-white rounded-sm relative"><span class="absolute inset-0.5 bg-emerald-400 rounded-[1px]" style="width:70%"></span></span>
+              </span>
+            </div>
+            <iframe id="previewFrame" class="w-full h-full bg-white" title="Önizleme"></iframe>
+            <div id="previewEmpty" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-center p-8">
+              <div class="text-4xl mb-3">📱</div>
+              <p class="text-sm font-bold">Önizlenecek HTML yok</p>
+              <p class="text-xs text-slate-400 mt-1">Dosyalar sekmesinden web klasörünü ekle.</p>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-[11px] text-slate-500 mt-4">Önizleme tamamen tarayıcıda, blob URL'leriyle çalışır. APK içinde aynı dosyalar WebView ile açılır.</p>
+      </div>
+    </div>
+
+    <div id="panel-out" class="tab-panel hidden">
+      <div id="outEmpty" class="card rounded-2xl p-12 text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 border border-white/10 flex items-center justify-center text-3xl mb-4">📦</div>
+        <h3 class="font-bold">Henüz paket üretilmedi</h3>
+        <p class="text-sm text-slate-400 mt-1 max-w-md mx-auto">Ayarları yap, dosyaları ekle ve alttaki <b class="text-indigo-300">"APK Projesi Oluştur"</b> düğmesine bas. Android Studio'da derlenmeye hazır tam proje ZIP'i inecek.</p>
+        <button onclick="runGenerate()" class="mt-5 text-sm font-bold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:opacity-90 text-white transition glow">Şimdi Oluştur</button>
+      </div>
+
+      <div id="outResult" class="hidden space-y-4">
+        <div class="card rounded-2xl p-5 animate-pop">
+          <div class="flex items-start gap-4 flex-wrap">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="font-bold text-sm">Android proje paketin hazır! 🎉</h3>
+              <p id="outFileName" class="font-mono text-[11px] text-indigo-300 mt-0.5 truncate">—</p>
+              <div class="flex gap-2 mt-2 flex-wrap">
+                <span id="outSizeChip" class="text-[10px] font-semibold bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-slate-300">—</span>
+                <span id="outCountChip" class="text-[10px] font-semibold bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-slate-300">—</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button id="btnDownload2" class="text-xs font-bold px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white transition flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> ZIP'i İndir
+              </button>
+              <button onclick="runGenerate()" class="text-xs font-bold px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition">Yeniden Üret</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-white/5 text-[13px] font-bold">🗂 Üretilen Proje Yapısı</div>
+            <pre id="outTree" class="p-4 text-[11px] leading-relaxed text-emerald-200/90 overflow-auto max-h-[420px]"></pre>
+          </div>
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-white/5 text-[13px] font-bold">📄 README.md Önizleme</div>
+            <pre id="outReadme" class="p-4 text-[11px] leading-relaxed text-slate-300 overflow-auto max-h-[420px] whitespace-pre-wrap"></pre>
+          </div>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <h3 class="text-[13px] font-bold mb-3">🚀 APK'ya Giden Yol</h3>
+          <ol class="space-y-3 text-[13px] text-slate-300">
+            <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">1</span><div><b>ZIP'i çıkart.</b> Klasör doğrudan bir Gradle/Android projesidir.</div></li>
+            <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">2</span><div><b>Android Studio:</b> Open → klasörü seç → Gradle sync → <span class="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded">Build → Build APK(s)</span>.<br><b>Terminal:</b> <span class="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded">gradle wrapper --gradle-version 8.7</span> sonra <span class="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded">./gradlew assembleDebug</span></div></li>
+            <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">3</span><div><b>Bilgisayarında Android yoksa:</b> klasörü GitHub'a push et — pakete dahil edilen <span class="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded">.github/workflows/build-apk.yml</span> sayesinde Actions sekmesinde APK bulutta derlenir, artifact olarak iner.</div></li>
+            <li class="flex gap-3"><span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center shrink-0">4</span><div><b>APK konumu:</b> <span class="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded">app/build/outputs/apk/debug/app-debug.apk</span> — telefona kopyala ve kur.</div></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="fixed bottom-0 inset-x-0 z-40 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl">
+  <div class="max-w-[1440px] mx-auto px-4 lg:px-6 py-3 flex items-center gap-3 flex-wrap">
+    <div id="statusBar" class="flex items-center gap-2 flex-wrap text-[11px]">
+      <span class="font-semibold bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-slate-300">0 dosya</span>
+    </div>
+    <div class="ml-auto flex items-center gap-3">
+      <p class="hidden md:block text-[10px] text-slate-500 text-right leading-tight">Android Studio / Gradle / GitHub Actions ile<br>derlenmeye hazır proje ZIP'i üretilir</p>
+      <button id="btnGenerate" class="group relative text-sm font-extrabold px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white transition hover:opacity-90 glow flex items-center gap-2">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+        APK Projesi Oluştur
+      </button>
+    </div>
+  </div>
+</footer>
+
+<!-- YARDIM MODALI -->
+<div id="helpModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="card rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 animate-pop">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-extrabold text-lg">Nasıl Çalışır?</h3>
+      <button onclick="closeModal('helpModal')" class="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center">✕</button>
+    </div>
+    <ol class="space-y-4 text-sm text-slate-300">
+      <li><b class="text-indigo-300">1 — Klasörü yükle:</b> index.html içeren web klasörünü sürükle. Tüm alt klasörler (css/, js/, img/…) korunur.</li>
+      <li><b class="text-indigo-300">2 — Ayarla:</b> uygulama adı, paket adı, ikon, renkler, yönelim, izinler ve WebView davranışları.</li>
+      <li><b class="text-indigo-300">3 — Önizle:</b> telefon çerçevesinde uygulamayı anında gör.</li>
+      <li><b class="text-indigo-300">4 — Üret:</b> düğme; <span class="font-mono text-xs">MainActivity.java</span>, <span class="font-mono text-xs">AndroidManifest.xml</span>, Gradle dosyaları, tüm yoğunluklarda launcher ikonları, splash ekranı, PWA (manifest + service worker) ve GitHub Actions iş akışını içeren tam bir <b>Android Studio projesi</b> oluşturup ZIP olarak indirir.</li>
+      <li><b class="text-indigo-300">5 — Derle:</b>
+        <ul class="list-disc ml-5 mt-1 space-y-1 text-[13px] text-slate-400">
+          <li>Android Studio → <span class="font-mono text-xs">Build → Build APK(s)</span></li>
+          <li>Terminal → <span class="font-mono text-xs">gradle wrapper</span> + <span class="font-mono text-xs">./gradlew assembleDebug</span></li>
+          <li>GitHub'a push et → Actions otomatik APK üretir (bilgisayara gerek yok!)</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="mt-5 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[12px] text-amber-200">
+      ⚠️ Tarayıcılar güvenlik gereği doğrudan APK derleyemez. Bu araç, APK üretmek için gereken <b>her şeyi</b> (tam proje + bulutta derleme talimatları) hazırlar. Play Store için README'deki imzalama adımlarını uygula.
+    </div>
+  </div>
+</div>
+
+<div id="progressModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="card rounded-3xl w-full max-w-md p-6 animate-pop">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center animate-pulse">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>
+      </div>
+      <div>
+        <h3 class="font-extrabold">Paket Hazırlanıyor</h3>
+        <p class="text-[11px] text-slate-400">Android proje dosyaları yazılıyor…</p>
+      </div>
+    </div>
+    <ul id="progSteps" class="space-y-2.5 mb-5"></ul>
+    <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+      <div id="progBar" class="h-full w-0 bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all duration-200"></div>
+    </div>
+    <p id="progPct" class="text-right text-[11px] font-mono text-slate-400 mt-1">%0</p>
+  </div>
+</div>
+
+<div id="toasts" class="fixed bottom-24 right-4 z-[60] space-y-2 w-[300px]"></div>
+
+<input type="file" id="dirInput" webkitdirectory directory multiple class="hidden">
+<input type="file" id="fileInput" multiple class="hidden">
+<input type="file" id="iconInput" accept="image/*" class="hidden">
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const state = {
+  files: new Map(),
+  iconImg: null,
+  previewUrls: [],
+  lastBuild: null,
+  collapsed: new Set()
+};
+
+const TEXT_EXT = ['html','htm','css','js','mjs','json','svg','txt','md','xml','csv','yml','yaml','webmanifest','map','ts','jsx','vue','php'];
+const MIME = {html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',ico:'image/x-icon',bmp:'image/bmp',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',webm:'video/webm',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',eot:'application/vnd.ms-fontobject',txt:'text/plain',xml:'application/xml',md:'text/markdown',webmanifest:'application/manifest+json',pdf:'application/pdf'};
+const PERMS = [
+  ['android.permission.CAMERA','Kamera'],
+  ['android.permission.RECORD_AUDIO','Mikrofon'],
+  ['android.permission.ACCESS_FINE_LOCATION','Konum'],
+  ['android.permission.VIBRATE','Titreşim'],
+  ['android.permission.READ_MEDIA_IMAGES','Medya okuma'],
+  ['android.permission.WRITE_EXTERNAL_STORAGE','Depolama (eski)'],
+  ['android.permission.BLUETOOTH_CONNECT','Bluetooth'],
+  ['android.permission.NFC','NFC'],
+  ['android.permission.POST_NOTIFICATIONS','Bildirim'],
+  ['android.permission.WAKE_LOCK','Wake lock']
+];
+
+const delay = ms => new Promise(r=>setTimeout(r,ms));
+const extOf = p => (p.split('.').pop()||'').toLowerCase();
+const dirOf = p => { const i=p.lastIndexOf('/'); return i<0?'':p.slice(0,i); };
+const fmtSize = b => b<1024? b+' B' : b<1048576? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
+const slugify = s => (s||'').toLowerCase().replace(/ş/g,'s').replace(/ç/g,'c').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/[^a-z0-9]+/g,'').slice(0,24);
+const xmlEsc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const validPkg = p => /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(p||'');
+function shade(hex,p){ const n=parseInt((hex||'#6366f1').slice(1),16); let r=(n>>16)+p,g=((n>>8)&255)+p,b=(n&255)+p; r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b)); return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0'); }
+function initialsOf(name){ const w=(name||'').trim().split(/\s+/).filter(Boolean); if(!w.length) return 'A'; return ((w[0][0]||'')+(w[1]?w[1][0]:'')).toUpperCase(); }
+function fill(t,map){ for(const k in map) t=t.split('{'+k+'}').join(map[k]); return t; }
+function toast(msg,type='ok'){
+  const el=document.createElement('div');
+  const col = type==='err'?'border-rose-500/40 bg-rose-950/90 text-rose-100':'border-emerald-500/40 bg-emerald-950/90 text-emerald-100';
+  el.className=`animate-rise border ${col} backdrop-blur rounded-xl px-4 py-3 text-[12px] font-semibold shadow-xl`;
+  el.textContent=msg;
+  $('#toasts').appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .3s, transform .3s'; el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),300); }, 3400);
+}
+function openModal(id){ const m=$('#'+id); m.classList.remove('hidden'); m.classList.add('flex'); }
+function closeModal(id){ const m=$('#'+id); m.classList.add('hidden'); m.classList.remove('flex'); }
+
+function collectSettings(){
+  return {
+    name: $('#appName').value.trim()||'Uygulamam',
+    pkg: ($('#appPkg').value.trim()||'com.example.uygulamam').toLowerCase(),
+    vname: $('#appVName').value.trim()||'1.0.0',
+    vcode: Math.max(1, parseInt($('#appVCode').value)||1),
+    color: $('#colTheme').value,
+    statusColor: $('#colStatus').value,
+    splashColor: $('#colSplash').value,
+    entry: $('#selEntry').value,
+    orientation: $('#selOrient').value,
+    minSdk: $('#selMinSdk').value,
+    fullscreen: $('#optFullscreen').checked,
+    keepOn: $('#optKeepOn').checked,
+    zoom: $('#optZoom').checked,
+    internalLinks: $('#optInternal').checked,
+    cleartext: $('#optCleartext').checked,
+    offline: $('#optOffline').checked,
+    perms: $$('#permGrid input:checked').map(i=>i.value)
+  };
+}
+function saveSettings(){
+  try{ localStorage.setItem('webapk-settings', JSON.stringify({
+    s: collectSettings(), perms: collectSettings().perms })); }catch(e){}
+}
+function loadSettings(){
+  try{
+    const d=JSON.parse(localStorage.getItem('webapk-settings')||'null'); if(!d) return;
+    const s=d.s;
+    $('#appName').value=s.name; $('#appPkg').value=s.pkg; $('#appVName').value=s.vname; $('#appVCode').value=s.vcode;
+    $('#colTheme').value=s.color; $('#colStatus').value=s.statusColor; $('#colSplash').value=s.splashColor;
+    $('#selOrient').value=s.orientation; $('#selMinSdk').value=s.minSdk;
+    $('#optFullscreen').checked=s.fullscreen; $('#optKeepOn').checked=s.keepOn; $('#optZoom').checked=s.zoom;
+    $('#optInternal').checked=s.internalLinks; $('#optCleartext').checked=s.cleartext; $('#optOffline').checked=s.offline;
+    (s.perms||[]).forEach(p=>{ const c=$(`#permGrid input[value="${p}"]`); if(c) c.checked=true; });
+  }catch(e){}
+}
+
+function roundClip(ctx,s){ const r=s*0.22; ctx.beginPath(); ctx.moveTo(r,0); ctx.lineTo(s-r,0); ctx.quadraticCurveTo(s,0,s,r); ctx.lineTo(s,s-r); ctx.quadraticCurveTo(s,s,s-r,s); ctx.lineTo(r,s); ctx.quadraticCurveTo(0,s,0,s-r); ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0); ctx.closePath(); ctx.clip(); }
+function drawIcon(ctx,size){
+  roundClip(ctx,size);
+  if(state.iconImg){
+    const img=state.iconImg, s=Math.min(img.width,img.height);
+    ctx.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,size,size);
+  } else {
+    const col=$('#colTheme').value;
+    const g=ctx.createLinearGradient(0,0,size,size); g.addColorStop(0,shade(col,30)); g.addColorStop(1,shade(col,-70));
+    ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
+    ctx.fillStyle='rgba(255,255,255,.13)'; ctx.beginPath(); ctx.arc(size*0.85,size*0.12,size*0.38,0,7); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.12)'; ctx.beginPath(); ctx.arc(size*0.1,size*0.95,size*0.3,0,7); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font=`800 ${size*0.4}px Inter, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(initialsOf($('#appName').value), size/2, size/2+size*0.03);
+  }
+}
+function renderIconBlob(size){
+  return new Promise(res=>{
+    const c=document.createElement('canvas'); c.width=c.height=size;
+    drawIcon(c.getContext('2d'),size);
+    c.toBlob(b=>res(b),'image/png');
+  });
+}
+async function refreshIconPreview(){
+  const c=$('#iconPreview'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  drawIcon(ctx,c.width);
+}
+
+function isTextFile(p){ return TEXT_EXT.includes(extOf(p)); }
+function addFileObj(path, arrayBuffer, size){
+  if(/(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/.test(path)) return false;
+  if(/(^|\/)(node_modules|\.git)\//.test(path)) return false;
+  if(size>25*1048576){ toast(`Atlandı (çok büyük): ${path}`,'err'); return false; }
+  const f={ path, size, mime: MIME[extOf(path)]||'application/octet-stream', content: arrayBuffer, text:null };
+  if(isTextFile(path)) f.text=new TextDecoder('utf-8').decode(arrayBuffer);
+  state.files.set(path,f); return true;
+}
+async function addFileList(fileList, useRel){
+  let n=0;
+  for(const f of fileList){
+    const path = useRel && f.webkitRelativePath ? f.webkitRelativePath : f.name;
+    const buf = await f.arrayBuffer();
+    if(addFileObj(path,buf,f.size)) n++;
+  }
+  return n;
+}
+function walkEntry(entry, prefix){
+  return new Promise(res=>{
+    if(entry.isFile){
+      entry.file(async f=>{ const buf=await f.arrayBuffer(); addFileObj(prefix+f.name,buf,f.size); res(); }, ()=>res());
+    } else if(entry.isDirectory){
+      const reader=entry.createReader();
+      const readAll=()=>{ reader.readEntries(async batch=>{
+        if(!batch.length){ res(); return; }
+        for(const b of batch) await walkEntry(b, prefix+entry.name+'/');
+        readAll();
+      }, ()=>res()); };
+      readAll();
+    } else res();
+  });
+}
+function stripCommonRoot(){
+  const paths=[...state.files.keys()];
+  if(paths.length<2) return;
+  const firsts=new Set(paths.map(p=>p.split('/')[0]));
+  if(firsts.size===1 && paths.every(p=>p.includes('/'))){
+    const root=[...firsts][0]; const nm=new Map();
+    for(const [p,f] of state.files){ const np=p.slice(root.length+1); f.path=np; nm.set(np,f); }
+    state.files=nm;
+  }
+}
+function totalSize(){ let t=0; for(const f of state.files.values()) t+=f.size; return t; }
+
+function fileIconColor(p){
+  const e=extOf(p);
+  if(['html','htm'].includes(e)) return 'text-orange-400';
+  if(e==='css') return 'text-sky-400';
+  if(['js','mjs','ts'].includes(e)) return 'text-yellow-400';
+  if(e==='json') return 'text-emerald-400';
+  if(['png','jpg','jpeg','gif','webp','svg','ico','bmp'].includes(e)) return 'text-fuchsia-400';
+  if(['mp3','mp4','wav','webm','ogg'].includes(e)) return 'text-rose-400';
+  if(['woff','woff2','ttf','otf'].includes(e)) return 'text-teal-400';
+  return 'text-slate-400';
+}
+function buildNested(){
+  const root={dirs:{},files:[]};
+  for(const p of state.files.keys()){
+    const segs=p.split('/'); let n=root;
+    for(let i=0;i<segs.length-1;i++){ n.dirs[segs[i]]=n.dirs[segs[i]]||{dirs:{},files:[]}; n=n.dirs[segs[i]]; }
+    n.files.push(p);
+  }
+  return root;
+}
+function renderTree(){
+  const box=$('#fileTree');
+  if(!state.files.size){
+    box.innerHTML='<p class="text-slate-500 text-xs text-center py-8">Henüz dosya eklenmedi.<br>Yukarıdan klasör sürükle veya <button class="text-indigo-300 underline" onclick="loadSample()">örnek projeyi</button> dene.</p>';
+    $('#fileCountChip').textContent='0 dosya'; return;
+  }
+  const node=buildNested();
+  const rows=[];
+  const walk=(n,depth,prefix)=>{
+    const dirs=Object.keys(n.dirs).sort();
+    const files=[...n.files].sort();
+    dirs.forEach(d=>{
+      const path=prefix?prefix+'/'+d:d;
+      const col=state.collapsed.has(path);
+      rows.push(`<div class="tree-row flex items-center gap-1.5 py-[3px] rounded-lg px-2 hover:bg-white/5 cursor-pointer select-none" data-folder="${path}" style="padding-left:${8+depth*16}px">
+        <svg class="text-slate-500 transition-transform ${col?'':'rotate-90'}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        <svg class="text-indigo-300" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>
+        <span class="font-semibold text-slate-300 text-[12.5px]">${d}</span><span class="text-slate-600">/</span></div>`);
+      if(!col) walk(n.dirs[d],depth+1,path);
+    });
+    files.forEach(p=>{
+      const f=state.files.get(p), name=p.split('/').pop();
+      rows.push(`<div class="tree-row flex items-center gap-1.5 py-[3px] rounded-lg px-2 hover:bg-white/5 group" style="padding-left:${8+depth*16+18}px">
+        <svg class="${fileIconColor(p)}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+        <span class="text-slate-200 text-[12.5px] truncate">${name}</span>
+        <span class="text-[10px] text-slate-500 font-mono shrink-0">${fmtSize(f.size)}</span>
+        <button class="del-btn ml-auto text-slate-500 hover:text-rose-400 shrink-0" title="Sil" data-del="${p}">✕</button></div>`);
+    });
+  };
+  walk(node,0,'');
+  box.innerHTML=rows.join('');
+  $('#fileCountChip').textContent=`${state.files.size} dosya · ${fmtSize(totalSize())}`;
+  box.querySelectorAll('[data-folder]').forEach(el=>el.addEventListener('click',()=>{
+    const p=el.dataset.folder;
+    state.collapsed.has(p)?state.collapsed.delete(p):state.collapsed.add(p);
+    renderTree();
+  }));
+  box.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation(); state.files.delete(el.dataset.del); refreshAll();
+  }));
+}
+function refreshEntrySelect(){
+  const sel=$('#selEntry'), cur=sel.value;
+  const htmls=[...state.files.keys()].filter(p=>/\.html?$/i.test(p)).sort();
+  sel.innerHTML='';
+  if(!htmls.length){ sel.innerHTML='<option value="">— HTML yok —</option>'; return; }
+  htmls.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+  if(htmls.includes(cur)) sel.value=cur;
+  else sel.value = htmls.includes('index.html') ? 'index.html' : htmls[0];
+}
+function refreshStatus(){
+  const s=collectSettings();
+  const pkgOk=validPkg(s.pkg);
+  $('#pkgHint').textContent = pkgOk ? '✓ Geçerli paket adı' : 'Geçersiz! küçük harf + nokta: com.sirket.uygulama';
+  $('#pkgHint').className = 'text-[11px] mt-1 '+(pkgOk?'text-emerald-400':'text-rose-400');
+  $('#appPkg').classList.toggle('bad',!pkgOk);
+  const entry=s.entry||'—';
+  $('#statusBar').innerHTML=`
+    <span class="font-semibold bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-slate-300">${state.files.size} dosya · ${fmtSize(totalSize())}</span>
+    <span class="hidden sm:inline font-mono bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-indigo-300">→ ${entry}</span>
+    <span class="hidden md:inline font-mono bg-white/5 border border-white/10 rounded-full px-2.5 py-1 ${pkgOk?'text-emerald-300':'text-rose-300'}">${pkgOk?'●':'○'} ${s.pkg}</span>`;
+}
+function refreshAll(){ stripCommonRoot(); renderTree(); refreshEntrySelect(); refreshStatus(); buildPreview(); saveSettings(); }
+
+function resolveRef(baseDir,ref){
+  ref=(ref||'').trim();
+  if(!ref) return null;
+  if(/^(https?:)?\/\//i.test(ref)||ref.startsWith('data:')||ref.startsWith('#')||ref.startsWith('mailto:')||ref.startsWith('javascript:')||ref.startsWith('blob:')) return null;
+  ref=ref.split('#')[0].split('?')[0]; if(!ref) return null;
+  let p = ref.startsWith('/') ? ref.slice(1) : (baseDir? baseDir+'/'+ref : ref);
+  const parts=[]; for(const seg of p.split('/')){ if(seg===''||seg==='.')continue; if(seg==='..')parts.pop(); else parts.push(seg); }
+  const norm=parts.join('/');
+  return state.files.has(norm)? norm : null;
+}
+function urlFor(path,urlMap){
+  if(urlMap.has(path)) return urlMap.get(path);
+  const f=state.files.get(path);
+  let body=f.content, type=f.mime;
+  if(f.text!=null && extOf(path)==='css') body=processCss(f.text,dirOf(path),urlMap);
+  const u=URL.createObjectURL(new Blob([body],{type}));
+  urlMap.set(path,u); state.previewUrls.push(u);
+  return u;
+}
+function processCss(text,baseDir,urlMap){
+  text=text.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g,(m,q,ref)=>{
+    const t=resolveRef(baseDir,ref); return t? `url("${urlFor(t,urlMap)}")` : m;
+  });
+  text=text.replace(/@import\s+(['"])([^'"]+)\1/g,(m,q,ref)=>{
+    const t=resolveRef(baseDir,ref); return t? `@import "${urlFor(t,urlMap)}"` : m;
+  });
+  return text;
+}
+function buildPreview(){
+  state.previewUrls.forEach(u=>URL.revokeObjectURL(u)); state.previewUrls=[];
+  const entry=$('#selEntry').value;
+  const frame=$('#previewFrame'), empty=$('#previewEmpty');
+  $('#prevEntryChip').textContent=entry||'—';
+  if(!entry||!state.files.has(entry)){ empty.classList.remove('hidden'); frame.src='about:blank'; return; }
+  empty.classList.add('hidden');
+  const urlMap=new Map();
+  const f=state.files.get(entry);
+  const baseDir=dirOf(entry);
+  const doc=new DOMParser().parseFromString(f.text||'','text/html');
+  doc.querySelectorAll('link[href]').forEach(el=>{ const t=resolveRef(baseDir,el.getAttribute('href')); if(t) el.setAttribute('href',urlFor(t,urlMap)); });
+  doc.querySelectorAll('script[src]').forEach(el=>{ const t=resolveRef(baseDir,el.getAttribute('src')); if(t) el.setAttribute('src',urlFor(t,urlMap)); });
+  doc.querySelectorAll('img[src],source[src],video[src],audio[src],iframe[src],embed[src],track[src],input[src]').forEach(el=>{ const t=resolveRef(baseDir,el.getAttribute('src')); if(t) el.setAttribute('src',urlFor(t,urlMap)); });
+  doc.querySelectorAll('video[poster]').forEach(el=>{ const t=resolveRef(baseDir,el.getAttribute('poster')); if(t) el.setAttribute('poster',urlFor(t,urlMap)); });
+  doc.querySelectorAll('[srcset]').forEach(el=>{
+    const parts=el.getAttribute('srcset').split(',').map(x=>{
+      const bits=x.trim().split(/\s+/); const t=resolveRef(baseDir,bits[0]);
+      if(t) bits[0]=urlFor(t,urlMap); return bits.join(' ');
+    });
+    el.setAttribute('srcset',parts.join(', '));
+  });
+  doc.querySelectorAll('style').forEach(st=>{ st.textContent=processCss(st.textContent||'',baseDir,urlMap); });
+  const out='<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
+  const u=URL.createObjectURL(new Blob([out],{type:'text/html'}));
+  state.previewUrls.push(u);
+  frame.src=u;
+}
+
+function addText(path,text){
+  const enc=new TextEncoder().encode(text);
+  addFileObj(path,enc.buffer,enc.length);
+}
+function loadSample(){
+  state.files.clear();
+  addText('index.html',`<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Demo Uygulama</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🚀 Demo Uygulama</h1>
+    <p>WebAPK Studio örnek projesi</p>
+  </header>
+  <main>
+    <div class="card">
+      <div class="count" id="count">0</div>
+      <div class="row">
+        <button id="dec">−</button>
+        <button id="reset">Sıfırla</button>
+        <button id="inc">+</button>
+      </div>
+    </div>
+    <button class="wide" id="theme">🌗 Temayı Değiştir</button>
+    <p class="hint" id="hint">Sayaç değeri cihazda saklanır.</p>
+  </main>
+</div>
+<script src="js/app.js"><\/script>
+</body>
+</html>`);
+  addText('css/style.css',`*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg1:#eef2ff;--bg2:#fdf4ff;--card:#ffffff;--text:#0f172a;--sub:#64748b;--acc:#6366f1}
+body.dark{--bg1:#0f172a;--bg2:#1e1b4b;--card:#1e293b;--text:#f1f5f9;--sub:#94a3b8}
+body{font-family:system-ui,-apple-system,sans-serif;min-height:100vh;background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--text);display:flex;justify-content:center;transition:background .3s}
+.app{width:100%;max-width:420px;padding:48px 20px 32px;display:flex;flex-direction:column;gap:20px}
+header{text-align:center}
+h1{font-size:26px;letter-spacing:-.5px}
+header p{color:var(--sub);font-size:13px;margin-top:4px}
+.card{background:var(--card);border-radius:24px;padding:32px 20px;box-shadow:0 20px 40px -20px rgba(0,0,0,.25);text-align:center}
+.count{font-size:72px;font-weight:800;color:var(--acc);line-height:1;margin-bottom:24px;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;justify-content:center}
+button{border:none;cursor:pointer;font-size:18px;font-weight:700;border-radius:14px;padding:12px 22px;color:#fff;background:var(--acc);transition:transform .1s,opacity .2s}
+button:active{transform:scale(.94)}
+#reset{background:transparent;color:var(--sub);border:1.5px solid var(--sub);font-size:13px}
+.wide{width:100%;background:var(--card);color:var(--text);border:1.5px solid var(--acc);font-size:15px}
+.hint{text-align:center;color:var(--sub);font-size:12px}`);
+  addText('js/app.js',`let count = parseInt(localStorage.getItem('sayac') || '0', 10);
+const el = document.getElementById('count');
+const hint = document.getElementById('hint');
+
+function render() {
+  el.textContent = count;
+  hint.textContent = 'Sayaç: ' + count + ' — cihazda saklanıyor 💾';
+  localStorage.setItem('sayac', String(count));
+}
+document.getElementById('inc').addEventListener('click', () => { count++; render(); });
+document.getElementById('dec').addEventListener('click', () => { count--; render(); });
+document.getElementById('reset').addEventListener('click', () => { count = 0; render(); });
+document.getElementById('theme').addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('tema', document.body.classList.contains('dark') ? 'koyu' : 'acik');
+});
+if (localStorage.getItem('tema') === 'koyu') document.body.classList.add('dark');
+render();`);
+  addText('README.txt',`Bu klasör örnek bir web uygulamasıdır.
+WebAPK Studio ile APK projesine dönüştürebilirsiniz.`);
+  refreshAll();
+  toast('Örnek proje yüklendi 🎉');
+  switchTab('preview');
+}
+
+function tplMainActivity(s){
+  const FS_CREATE = s.fullscreen ? `        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        hideSystemUi();
+` : '';
+  const KEEPON = s.keepOn ? `        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+` : '';
+  const FS_EXTRA = s.fullscreen ? `
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemUi();
+    }
+
+    private void hideSystemUi() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN);
+    }
+` : '';
+  const LINK = s.internalLinks ? `            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme();
+                if (scheme != null && (scheme.equals("http") || scheme.equals("https")
+                        || scheme.equals("file") || scheme.equals("content"))) {
+                    return false; // uygulama icinde ac
+                }
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception ignored) { }
+                return true;
+            }` : `            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme();
+                boolean local = scheme != null && (scheme.equals("file") || scheme.equals("content"));
+                if (local) return false;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri)); // tarayicida ac
+                } catch (Exception ignored) { }
+                return true;
+            }`;
+  return fill(`package {PACKAGE};
+
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+public class MainActivity extends Activity {
+
+    private WebView webView;
+
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.Theme_App);
+        super.onCreate(savedInstanceState);
+{FS_CREATE}{KEEPON}
+        webView = new WebView(this);
+        setContentView(webView);
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setSupportZoom({ZOOM});
+        settings.setBuiltInZoomControls({ZOOM});
+        settings.setDisplayZoomControls(false);
+
+        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebViewClient(new WebViewClient() {
+{LINK}
+        });
+
+        if (savedInstanceState == null) {
+            webView.loadUrl("file:///android_asset/www/{ENTRY}");
+        } else {
+            webView.restoreState(savedInstanceState);
+        }
+    }
+{FS_EXTRA}
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView != null) webView.saveState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (webView != null) {
+            webView.stopLoading();
+            webView.destroy();
+        }
+        super.onDestroy();
+    }
+}
+`, { PACKAGE:s.pkg, FS_CREATE, KEEPON, FS_EXTRA, LINK, ZOOM:String(s.zoom), ENTRY:s.entry });
+}
+function tplManifest(s){
+  const perms = s.perms.map(p=>`    <uses-permission android:name="${p}" />`).join('\n');
+  return fill(`<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+{PERMS}
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="{CLEARTEXT}"
+        android:theme="@style/Theme.App">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|density"
+            android:screenOrientation="{ORIENT}"
+            android:theme="@style/Theme.App.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+`, { PERMS:perms, CLEARTEXT:String(s.cleartext), ORIENT:s.orientation });
+}
+function tplReadme(s){
+  const orientMap={unspecified:'Otomatik',portrait:'Portre',landscape:'Yatay'};
+  const date=new Date().toLocaleDateString('tr-TR');
+  return fill(`# {NAME} — Android WebView Projesi
+
+Bu proje **WebAPK Studio** ile {DATE} tarihinde otomatik oluşturuldu.
+Web uygulamanız \`app/src/main/assets/www/\` klasöründedir.
+
+## 🚀 Android Studio ile APK Alma
+1. ZIP'i çıkartın.
+2. Android Studio → **Open** → proje klasörünü seçin.
+3. Gradle senkronizasyonunun bitmesini bekleyin (internet gerekir).
+4. **Build → Build App Bundle(s) / APK(s) → Build APK(s)**.
+5. APK konumu: \`app/build/outputs/apk/debug/app-debug.apk\`
+
+## 💻 Terminal ile
+\`\`\`bash
+gradle wrapper --gradle-version 8.7   # ilk kez
+./gradlew assembleDebug               # Windows: gradlew.bat
+\`\`\`
+
+## ☁️ GitHub Actions ile Bulutta Derleme (Android kurulumu gerekmez!)
+1. Bu klasörü bir GitHub reposuna gönderin (\`git init && git add . && git commit && git push\`).
+2. **Actions** sekmesinde **"APK Derle"** iş akışını çalıştırın.
+3. İş bitince \`apk\` artifact'ını indirin.
+
+## 🔐 İmzalı (Release) APK — Play Store için
+\`\`\`bash
+keytool -genkey -v -keystore release.keystore -alias {SLUG} -keyalg RSA -keysize 2048 -validity 10000
+\`\`\`
+Sonra \`app/build.gradle\` içine \`signingConfigs\` bloğu ekleyip \`./gradlew assembleRelease\` çalıştırın.
+
+## ⚙️ Proje Ayarları
+| Ayar | Değer |
+|---|---|
+| Paket | \`{PKG}\` |
+| Sürüm | {VNAME} ({VCODE}) |
+| Min SDK | {MINSDK} |
+| Yönelim | {ORIENT} |
+| Giriş sayfası | \`{ENTRY}\` |
+{PWA_NOTE}
+## 📂 Yapı
+\`\`\`
+app/src/main/
+├── AndroidManifest.xml      (izinler, aktivite)
+├── java/.../MainActivity.java (WebView kabuğu)
+├── res/                     (ikonlar, temalar, splash)
+└── assets/www/              (SİZİN WEB DOSYALARINIZ)
+\`\`\`
+`, { NAME:xmlEsc(s.name), DATE:date, SLUG:slugify(s.name)||'app', PKG:s.pkg, VNAME:s.vname, VCODE:String(s.vcode), MINSDK:s.minSdk, ORIENT:orientMap[s.orientation]||s.orientation, ENTRY:s.entry,
+  PWA_NOTE: s.offline ? '\n## 🌐 PWA\n`manifest.json` ve `sw.js` www klasörüne eklendi; uygulama çevrimdışı da çalışır.\n' : '' });
+}
+function tplWorkflow(s){
+  return fill(`name: APK Derle
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Debug APK derle
+        run: gradle assembleDebug --no-daemon
+
+      - name: APK'yi yayinla
+        uses: actions/upload-artifact@v4
+        with:
+          name: {SLUG}-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+`, { SLUG: slugify(s.name)||'app' });
+}
+function tplSw(s, fileList){
+  const assets = ['./'+s.entry, ...fileList.slice(0,80).map(p=>'./'+p)];
+  return `/* WebAPK Studio - Basit cache-first service worker */
+const CACHE = 'app-cache-v1';
+const ASSETS = ${JSON.stringify(assets, null, 2)};
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(()=>{}).then(()=>self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((ks) => Promise.all(
+    ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))
+  )).then(()=>self.clients.claim()));
+});
+
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then((hit) => {
+      const network = fetch(e.request).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      }).catch(() => caches.match('./${s.entry}'));
+      return hit || network;
+    })
+  );
+});`;
+}
+function injectPwa(html, s){
+  const head = `<link rel="manifest" href="manifest.json">\n<meta name="theme-color" content="${s.color}">`;
+  const reg = `<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}<\/script>`;
+  if(/<\/head>/i.test(html)) return html.replace(/<\/head>/i, head+'\n'+reg+'\n</head>');
+  return head+'\n'+reg+'\n'+html;
+}
+
+async function buildProjectEntries(s){
+  const E=[]; const add=(p,d)=>E.push({path:p,data:d});
+  const pkgDir=s.pkg.replace(/\./g,'/');
+
+  add('settings.gradle', fill(`pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "{NAME}"
+include ':app'
+`, {NAME:xmlEsc(s.name)}));
+  add('build.gradle', `plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}
+`);
+  add('gradle.properties', `org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+`);
+  add('gradle/wrapper/gradle-wrapper.properties', `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+`);
+  add('.gitignore', `*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+`);
+  add('app/build.gradle', fill(`plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace '{PKG}'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "{PKG}"
+        minSdk {MINSDK}
+        targetSdk 34
+        versionCode {VCODE}
+        versionName "{VNAME}"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Saf framework WebView kullanilir; ek bagimlilik gerekmez.
+}
+`, {PKG:s.pkg, MINSDK:s.minSdk, VCODE:String(s.vcode), VNAME:xmlEsc(s.vname)}));
+  add('app/proguard-rules.pro', `# ProGuard kurallari
+# WebView uygulamasi icin genellikle ek kural gerekmez.
+`);
+  add('app/src/main/AndroidManifest.xml', tplManifest(s));
+  add(`app/src/main/java/${pkgDir}/MainActivity.java`, tplMainActivity(s));
+  add('app/src/main/res/values/strings.xml', `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">${xmlEsc(s.name)}</string>
+</resources>
+`);
+  add('app/src/main/res/values/colors.xml', `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="theme_primary">${s.color}</color>
+    <color name="status_bar">${s.statusColor}</color>
+    <color name="window_bg">#FFFFFF</color>
+    <color name="splash_bg">${s.splashColor}</color>
+</resources>
+`);
+  add('app/src/main/res/values-night/colors.xml', `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="window_bg">#0B1220</color>
+</resources>
+`);
+  add('app/src/main/res/values/themes.xml', `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:navigationBarColor">@color/status_bar</item>
+        <item name="android:windowBackground">@color/window_bg</item>
+    </style>
+    <style name="Theme.App.Splash" parent="Theme.App">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>
+`);
+  add('app/src/main/res/values-night/themes.xml', `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:navigationBarColor">@color/status_bar</item>
+        <item name="android:windowBackground">@color/window_bg</item>
+    </style>
+    <style name="Theme.App.Splash" parent="Theme.App">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>
+`);
+  add('app/src/main/res/drawable/splash_background.xml', `<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_bg" />
+    <item>
+        <bitmap
+            android:src="@mipmap/ic_launcher"
+            android:gravity="center" />
+    </item>
+</layer-list>
+`);
+  const densities=[['mdpi',48],['hdpi',72],['xhdpi',96],['xxhdpi',144],['xxxhdpi',192]];
+  for(const [d,px] of densities) add(`app/src/main/res/mipmap-${d}/ic_launcher.png`, await renderIconBlob(px));
+
+  const wwwFiles=[...state.files.keys()];
+  for(const p of wwwFiles){
+    const f=state.files.get(p);
+    let data = f.text!=null ? f.text : f.content;
+    if(s.offline && p===s.entry && f.text!=null) data=injectPwa(f.text, s);
+    add(`app/src/main/assets/www/${p}`, data);
+  }
+  if(s.offline){
+    const orientPwa = s.orientation==='portrait'?'portrait':s.orientation==='landscape'?'landscape':'any';
+    add('app/src/main/assets/www/manifest.json', JSON.stringify({
+      name: s.name, short_name: s.name.slice(0,12),
+      start_url: './'+s.entry, scope: './', display: 'standalone',
+      orientation: orientPwa, theme_color: s.color, background_color: s.splashColor,
+      icons: [
+        {src:'icons/icon-192.png',sizes:'192x192',type:'image/png'},
+        {src:'icons/icon-512.png',sizes:'512x512',type:'image/png'}
+      ]
+    }, null, 2));
+    add('app/src/main/assets/www/sw.js', tplSw(s, wwwFiles));
+    add('app/src/main/assets/www/icons/icon-192.png', await renderIconBlob(192));
+    add('app/src/main/assets/www/icons/icon-512.png', await renderIconBlob(512));
+  }
+  add('.github/workflows/build-apk.yml', tplWorkflow(s));
+  add('README.md', tplReadme(s));
+  return E;
+}
+function buildNodeTree(paths){
+  const root={};
+  paths.forEach(p=>{ let n=root; p.split('/').forEach(seg=>{ n[seg]=n[seg]||{}; n=n[seg]; }); });
+  return root;
+}
+function printTree(node, prefix=''){
+  const keys=Object.keys(node).sort((a,b)=>{
+    const ad=Object.keys(node[a]).length>0, bd=Object.keys(node[b]).length>0;
+    if(ad!==bd) return ad?-1:1;
+    return a.localeCompare(b);
+  });
+  let out='';
+  keys.forEach((k,i)=>{
+    const last=i===keys.length-1, isDir=Object.keys(node[k]).length>0;
+    out+=prefix+(last?'└─ ':'├─ ')+k+(isDir?'/':'')+'\n';
+    if(isDir) out+=printTree(node[k], prefix+(last?'   ':'│  '));
+  });
+  return out;
+}
+
+let progSteps=[];
+function openProgress(steps){
+  progSteps=steps;
+  $('#progSteps').innerHTML=steps.map((s,i)=>`<li id="pstep-${i}" class="flex items-center gap-2.5 text-[13px] text-slate-500">
+    <span class="ind w-5 h-5 rounded-full border-2 border-slate-600 flex items-center justify-center text-[10px] shrink-0"></span>${s}</li>`).join('');
+  $('#progBar').style.width='0%'; $('#progPct').textContent='%0';
+  openModal('progressModal');
+}
+function setStepActive(i){
+  const el=$('#pstep-'+i); if(!el) return;
+  el.className='flex items-center gap-2.5 text-[13px] text-slate-200';
+  el.querySelector('.ind').innerHTML='<span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>';
+  el.querySelector('.ind').className='ind w-5 h-5 rounded-full border-2 border-indigo-400 flex items-center justify-center shrink-0';
+}
+function setStepDone(i){
+  const el=$('#pstep-'+i); if(!el) return;
+  el.className='flex items-center gap-2.5 text-[13px] text-emerald-300';
+  el.querySelector('.ind').innerHTML='✓';
+  el.querySelector('.ind').className='ind w-5 h-5 rounded-full bg-emerald-500/20 border-2 border-emerald-500 text-emerald-300 flex items-center justify-center text-[10px] shrink-0';
+}
+function setProg(p){ $('#progBar').style.width=p+'%'; $('#progPct').textContent='%'+Math.round(p); }
+
+async function runGenerate(){
+  const s=collectSettings();
+  if(!state.files.size){ toast('Önce web dosyalarını ekle!','err'); switchTab('files'); return; }
+  if(!validPkg(s.pkg)){ toast('Paket adı geçersiz. Örn: com.sirket.uygulama','err'); return; }
+  if(!s.entry || !state.files.has(s.entry)){ toast('Giriş sayfası (HTML) bulunamadı!','err'); return; }
+
+  const steps=['Dosyalar hazırlanıyor','Launcher ikonları üretiliyor','Android projesi yazılıyor'];
+  if(s.offline) steps.push('PWA paketi ekleniyor');
+  steps.push('ZIP sıkıştırılıyor');
+  openProgress(steps);
+  let si=0;
+  const next=async()=>{ setStepActive(si); await delay(280); setStepDone(si); si++; };
+
+  try{
+    await next();
+    await next();
+    const entries=await buildProjectEntries(s);
+    await next();
+    if(s.offline) await next();
+
+    setStepActive(si);
+    const zip=new JSZip();
+    entries.forEach(e=>zip.file(e.path,e.data));
+    const blob=await zip.generateAsync(
+      {type:'blob', compression:'DEFLATE', compressionOptions:{level:6}},
+      m=>{ setProg(m.percent*0.9); }
+    );
+    setProg(100); setStepDone(si);
+    await delay(350);
+
+    const fname=`${slugify(s.name)||'uygulama'}-android-v${s.vname}.zip`;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=fname;
+    document.body.appendChild(a); a.click(); a.remove();
+
+    if(state.lastBuild) URL.revokeObjectURL(state.lastBuild.url);
+    state.lastBuild={ entries, url, fname, size:blob.size, readme:entries.find(e=>e.path==='README.md').data };
+    renderOutput();
+    closeModal('progressModal');
+    switchTab('out');
+    toast('Android proje paketiniz hazır! 🎉');
+  }catch(err){
+    console.error(err);
+    closeModal('progressModal');
+    toast('Hata oluştu: '+err.message,'err');
+  }
+}
+function renderOutput(){
+  const b=state.lastBuild; if(!b) return;
+  $('#outEmpty').classList.add('hidden');
+  $('#outResult').classList.remove('hidden');
+  $('#outFileName').textContent=b.fname;
+  $('#outSizeChip').textContent=fmtSize(b.size);
+  $('#outCountChip').textContent=b.entries.length+' dosya';
+  let tree=printTree(buildNodeTree(b.entries.map(e=>e.path)));
+  const lines=tree.split('\n');
+  if(lines.length>90) tree=lines.slice(0,90).join('\n')+`\n… (+${lines.length-90} satır)`;
+  $('#outTree').textContent=tree;
+  $('#outReadme').textContent=b.readme;
+}
+
+function switchTab(name){
+  $$('.tab-btn').forEach(b=>{
+    const on=b.dataset.tab===name;
+    b.className='tab-btn px-4 py-2 rounded-xl text-[13px] font-semibold transition whitespace-nowrap '
+      +(on?'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg':'text-slate-400 hover:text-slate-200 hover:bg-white/5');
+  });
+  $$('.tab-panel').forEach(p=>p.classList.add('hidden'));
+  $('#panel-'+name).classList.remove('hidden');
+  if(name==='preview') buildPreview();
+}
+
+$$('.tab-btn').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+
+$('#btnPickFolder').addEventListener('click',e=>{ e.stopPropagation(); $('#dirInput').click(); });
+$('#btnPickFiles').addEventListener('click',e=>{ e.stopPropagation(); $('#fileInput').click(); });
+$('#dropZone').addEventListener('click',()=>$('#dirInput').click());
+$('#dirInput').addEventListener('change',async e=>{
+  const n=await addFileList(e.target.files,true); e.target.value='';
+  refreshAll(); toast(`${n} dosya eklendi`);
+});
+$('#fileInput').addEventListener('change',async e=>{
+  const n=await addFileList(e.target.files,false); e.target.value='';
+  refreshAll(); toast(`${n} dosya eklendi`);
+});
+const dz=$('#dropZone');
+['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.add('!border-indigo-400','bg-indigo-500/5'); }));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.remove('!border-indigo-400','bg-indigo-500/5'); }));
+dz.addEventListener('drop',async e=>{
+  const items=[...e.dataTransfer.items];
+  const entries=items.map(i=>i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if(entries.length){ for(const en of entries) await walkEntry(en,''); }
+  else if(e.dataTransfer.files.length){ await addFileList(e.dataTransfer.files,false); }
+  refreshAll(); toast('Dosyalar eklendi 📁');
+});
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('drop',e=>e.preventDefault());
+
+$('#btnClear').addEventListener('click',()=>{ state.files.clear(); refreshAll(); toast('Dosyalar temizlendi'); });
+$('#btnSample').addEventListener('click',loadSample);
+$('#btnHelp').addEventListener('click',()=>openModal('helpModal'));
+$('#helpModal').addEventListener('click',e=>{ if(e.target.id==='helpModal') closeModal('helpModal'); });
+$('#progressModal').addEventListener('click',e=>{  });
+
+$('#btnPkgAuto').addEventListener('click',()=>{
+  const slug=slugify($('#appName').value)||'uygulamam';
+  $('#appPkg').value='com.app.'+slug;
+  refreshStatus(); saveSettings();
+});
+$('#btnIconUpload').addEventListener('click',()=>$('#iconInput').click());
+$('#iconInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const img=new Image();
+  img.onload=()=>{ state.iconImg=img; refreshIconPreview(); toast('İkon yüklendi 🖼'); };
+  img.src=URL.createObjectURL(f);
+  e.target.value='';
+});
+$('#btnIconReset').addEventListener('click',()=>{ state.iconImg=null; refreshIconPreview(); toast('Otomatik ikon etkin'); });
+
+$('#btnGenerate').addEventListener('click',runGenerate);
+$('#btnDownload2').addEventListener('click',()=>{
+  if(!state.lastBuild) return;
+  const a=document.createElement('a'); a.href=state.lastBuild.url; a.download=state.lastBuild.fname;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+$('#btnPrevRefresh').addEventListener('click',()=>{ buildPreview(); toast('Önizleme yenilendi'); });
+$('#btnPrevOpen').addEventListener('click',()=>{
+  const src=$('#previewFrame').src;
+  if(src && src!=='about:blank') window.open(src,'_blank'); else toast('Önizlenecek sayfa yok','err');
+});
+
+['appName','appPkg','appVName','appVCode','selEntry','selOrient','selMinSdk'].forEach(id=>{
+  $('#'+id).addEventListener('input',()=>{ refreshStatus(); saveSettings(); });
+  $('#'+id).addEventListener('change',()=>{ refreshStatus(); saveSettings(); if(id==='selEntry') buildPreview(); });
+});
+['optFullscreen','optKeepOn','optZoom','optInternal','optCleartext','optOffline'].forEach(id=>{
+  $('#'+id).addEventListener('change',saveSettings);
+});
+['colTheme','colStatus','colSplash'].forEach(id=>{
+  $('#'+id).addEventListener('input',()=>{ refreshIconPreview(); saveSettings(); });
+});
+$$('#permGrid input').forEach(c=>c.addEventListener('change',saveSettings));
+
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); runGenerate(); }
+  if(e.key==='Escape'){ closeModal('helpModal'); }
+});
+
+function initPerms(){
+  $('#permGrid').innerHTML=PERMS.map(([v,l])=>`<label class="flex items-center gap-2 text-[12px] text-slate-300 cursor-pointer hover:text-white transition">
+    <input type="checkbox" value="${v}" class="accent-indigo-500 w-3.5 h-3.5 shrink-0"> ${l}</label>`).join('');
+}
+function tickClock(){
+  const d=new Date();
+  $('#phoneClock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+initPerms();
+loadSettings();
+refreshIconPreview();
+refreshAll();
+switchTab('files');
+tickClock(); setInterval(tickClock,30000);
+</script>
+</body>
+</html>
