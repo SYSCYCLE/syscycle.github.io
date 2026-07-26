@@ -19,38 +19,91 @@
 		tailwind.config = {
 			theme: {
 				extend: {
-					fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+					fontFamily: {
+						sans: ['Inter',
+							'system-ui',
+							'sans-serif']
+					},
 					colors: {
-						surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 850: '#172033', 900: '#0f172a', 950: '#0a0f1e' },
-						accent: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+						surface: {
+							50: '#f8fafc',
+							100: '#f1f5f9',
+							200: '#e2e8f0',
+							300: '#cbd5e1',
+							400: '#94a3b8',
+							500: '#64748b',
+							600: '#475569',
+							700: '#334155',
+							800: '#1e293b',
+							850: '#172033',
+							900: '#0f172a',
+							950: '#0a0f1e'
+						},
+						accent: {
+							50: '#eff6ff',
+							100: '#dbeafe',
+							200: '#bfdbfe',
+							300: '#93c5fd',
+							400: '#60a5fa',
+							500: '#3b82f6',
+							600: '#2563eb',
+							700: '#1d4ed8'
+						}
 					}
 				}
 			}
 		}
 	</script>
 	<style>
-		* { margin: 0; padding: 0; box-sizing: border-box; }
-		body { font-family: 'Inter', system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
-		
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		body {
+			font-family: 'Inter', system-ui, sans-serif;
+			user-select: none;
+			-webkit-user-select: none;
+		}
+
 		.canvas-area {
 			background-color: #0c1222;
-			background-image: 
-				radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 70%),
-				linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
-				linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+			background-image:
+			radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 70%),
+			linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
 			background-size: 100% 100%, 24px 24px, 24px 24px;
 		}
 
-		.sidebar-scroll::-webkit-scrollbar { width: 5px; }
-		.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-		.sidebar-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-		.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+		.sidebar-scroll::-webkit-scrollbar {
+			width: 5px;
+		}
+		.sidebar-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+		.sidebar-scroll::-webkit-scrollbar-thumb {
+			background: #334155;
+			border-radius: 10px;
+		}
+		.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+			background: #475569;
+		}
 
-		.layer-scroll::-webkit-scrollbar { width: 4px; }
-		.layer-scroll::-webkit-scrollbar-track { background: transparent; }
-		.layer-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+		.layer-scroll::-webkit-scrollbar {
+			width: 4px;
+		}
+		.layer-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+		.layer-scroll::-webkit-scrollbar-thumb {
+			background: #1e293b;
+			border-radius: 10px;
+		}
 
-		#paper-canvas { touch-action: none; outline: none; }
+		#paper-canvas {
+			touch-action: none;
+			outline: none;
+		}
 
 		.glass-panel {
 			background: rgba(15, 23, 42, 0.85);
@@ -86,40 +139,98 @@
 			border-radius: 12px;
 			transition: border-color 0.2s ease;
 		}
-		.section-card:hover { border-color: rgba(71, 85, 105, 0.7); }
+		.section-card:hover {
+			border-color: rgba(71, 85, 105, 0.7);
+		}
 
 		.slot-card {
 			transition: all 0.2s ease;
 			border: 1.5px solid rgba(51, 65, 85, 0.6);
 		}
-		.slot-card:hover { transform: translateY(-1px); }
-		.slot-card.active-base { border-color: rgba(59, 130, 246, 0.7); background: rgba(59, 130, 246, 0.06); }
-		.slot-card.active-cutter { border-color: rgba(239, 68, 68, 0.7); background: rgba(239, 68, 68, 0.06); }
+		.slot-card:hover {
+			transform: translateY(-1px);
+		}
+		.slot-card.active-base {
+			border-color: rgba(59, 130, 246, 0.7);
+			background: rgba(59, 130, 246, 0.06);
+		}
+		.slot-card.active-cutter {
+			border-color: rgba(239, 68, 68, 0.7);
+			background: rgba(239, 68, 68, 0.06);
+		}
 
 		.tool-btn {
 			transition: all 0.15s ease;
 		}
-		.tool-btn:hover { background: rgba(51, 65, 85, 0.8); }
-		.tool-btn.active { background: rgba(37, 99, 235, 0.2); color: #60a5fa; box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3); }
+		.tool-btn:hover {
+			background: rgba(51, 65, 85, 0.8);
+		}
+		.tool-btn.active {
+			background: rgba(37, 99, 235, 0.2);
+			color: #60a5fa;
+			box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
+		}
 
 		.template-btn {
 			transition: all 0.2s ease;
 		}
-		.template-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,0.3); }
+		.template-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 25px -5px rgba(0,0,0,0.3);
+		}
 
-		@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-		@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-		@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-		.animate-slide-up { animation: slideUp 0.3s ease forwards; }
-		.animate-fade-in { animation: fadeIn 0.2s ease forwards; }
-		.animate-scale-in { animation: scaleIn 0.2s ease forwards; }
+		@keyframes slideUp {
+			from {
+				opacity: 0;
+				transform: translateY(12px);
+			}
 
-		.toast-enter { animation: slideUp 0.3s ease forwards; }
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+			}
 
-		.mode-toggle { position: relative; }
+			to {
+				opacity: 1;
+			}
+		}
+		@keyframes scaleIn {
+			from {
+				opacity: 0;
+				transform: scale(0.95);
+			}
+
+			to {
+				opacity: 1;
+				transform: scale(1);
+			}
+		}
+		.animate-slide-up {
+			animation: slideUp 0.3s ease forwards;
+		}
+		.animate-fade-in {
+			animation: fadeIn 0.2s ease forwards;
+		}
+		.animate-scale-in {
+			animation: scaleIn 0.2s ease forwards;
+		}
+
+		.toast-enter {
+			animation: slideUp 0.3s ease forwards;
+		}
+
+		.mode-toggle {
+			position: relative;
+		}
 		.mode-toggle .slider {
 			position: absolute;
-			top: 3px; left: 3px;
+			top: 3px;
+			left: 3px;
 			width: calc(50% - 3px);
 			height: calc(100% - 6px);
 			background: linear-gradient(135deg, #2563eb, #4f46e5);
@@ -127,7 +238,9 @@
 			transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 			box-shadow: 0 2px 8px -2px rgba(37, 99, 235, 0.5);
 		}
-		.mode-toggle.manual .slider { transform: translateX(100%); }
+		.mode-toggle.manual .slider {
+			transform: translateX(100%);
+		}
 
 		.status-bar {
 			background: rgba(10, 15, 30, 0.9);
@@ -135,24 +248,55 @@
 			border-top: 1px solid rgba(51, 65, 85, 0.4);
 		}
 
-		input[type="range"] { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: #1e293b; outline: none; }
-		input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; box-shadow: 0 2px 6px rgba(59,130,246,0.4); }
-
-		input[type="checkbox"] { accent-color: #3b82f6; }
-
-		select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
-		
-		@media (max-width: 640px) {
-			#sidebar-panel { width: 280px; }
+		input[type="range"] {
+			-webkit-appearance: none;
+			appearance: none;
+			height: 6px;
+			border-radius: 3px;
+			background: #1e293b;
+			outline: none;
 		}
-		
-		@media (max-width: 640px) {
-			.glass-panel { padding: 2px; }
-			.tool-btn { padding: 8px; }
+		input[type="range"]::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 16px;
+			height: 16px;
+			border-radius: 50%;
+			background: #3b82f6;
+			cursor: pointer;
+			box-shadow: 0 2px 6px rgba(59,130,246,0.4);
 		}
-		
+
+		input[type="checkbox"] {
+			accent-color: #3b82f6;
+		}
+
+		select {
+			appearance: none;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+			background-repeat: no-repeat;
+			background-position: right 12px center;
+		}
+
 		@media (max-width: 640px) {
-			.status-bar { font-size: 9px; }
+			#sidebar-panel {
+				width: 280px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.glass-panel {
+				padding: 2px;
+			}
+			.tool-btn {
+				padding: 8px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.status-bar {
+				font-size: 9px;
+			}
 		}
 	</style>
 </head>
@@ -169,7 +313,9 @@
 				</div>
 				<div class="hidden sm:block">
 					<h1 class="text-sm font-bold text-white tracking-tight leading-none">SVG Vector Puncher</h1>
-					<p class="text-[10px] text-slate-500 font-medium mt-0.5" data-i18n="subtitle">İleri Düzey Mobil Uyumlu Oyma Aracı</p>
+					<p class="text-[10px] text-slate-500 font-medium mt-0.5" data-i18n="subtitle">
+						İleri Düzey Mobil Uyumlu Oyma Aracı
+					</p>
 				</div>
 			</div>
 		</div>
@@ -192,7 +338,7 @@
 		<div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 hidden lg:hidden transition-opacity duration-300 opacity-0"></div>
 
 		<aside id="sidebar-panel" class="fixed lg:relative inset-y-0 left-0 w-[320px] bg-surface-900 border-r border-surface-800/70 flex flex-col shrink-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
-			
+
 			<div class="lg:hidden flex items-center justify-between px-5 py-3.5 border-b border-surface-800/60">
 				<span class="text-xs font-bold uppercase tracking-widest text-slate-500" data-i18n="adminPanel">Yönetim Paneli</span>
 				<button onclick="toggleSidebar()" class="p-1.5 hover:bg-surface-800 text-slate-500 hover:text-white rounded-lg transition">
@@ -259,8 +405,12 @@
 									<span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>
 								</div>
 								<div>
-									<div class="text-[9px] text-slate-500 font-bold uppercase tracking-wide" data-i18n="baseShapeLabel">1. Taban Şekil (Delinen)</div>
-									<div id="base-shape-title" class="text-xs font-semibold text-slate-400 mt-0.5" data-i18n="notSelected">Seçilmedi</div>
+									<div class="text-[9px] text-slate-500 font-bold uppercase tracking-wide" data-i18n="baseShapeLabel">
+										1. Taban Şekil (Delinen)
+									</div>
+									<div id="base-shape-title" class="text-xs font-semibold text-slate-400 mt-0.5" data-i18n="notSelected">
+										Seçilmedi
+									</div>
 								</div>
 							</div>
 							<button id="btn-clear-base" onclick="clearSlot('base', event)" class="text-slate-600 hover:text-slate-300 p-1.5 hover:bg-surface-700/50 rounded-lg transition hidden">
@@ -273,8 +423,12 @@
 									<span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
 								</div>
 								<div>
-									<div class="text-[9px] text-slate-500 font-bold uppercase tracking-wide" data-i18n="cutterShapeLabel">2. Kesici Şekil (Delen)</div>
-									<div id="cutter-shape-title" class="text-xs font-semibold text-slate-400 mt-0.5" data-i18n="notSelected">Seçilmedi</div>
+									<div class="text-[9px] text-slate-500 font-bold uppercase tracking-wide" data-i18n="cutterShapeLabel">
+										2. Kesici Şekil (Delen)
+									</div>
+									<div id="cutter-shape-title" class="text-xs font-semibold text-slate-400 mt-0.5" data-i18n="notSelected">
+										Seçilmedi
+									</div>
 								</div>
 							</div>
 							<button id="btn-clear-cutter" onclick="clearSlot('cutter', event)" class="text-slate-600 hover:text-slate-300 p-1.5 hover:bg-surface-700/50 rounded-lg transition hidden">
@@ -355,109 +509,146 @@
 
 				<div class="section-card p-3.5">
 					<div class="flex items-center gap-2 mb-3">
-						<i class="fa-solid fa-layer-group text-blue-400 text-xs"></i>
-						<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="layerList">Katman Listesi</span>
-						<span class="ml-auto text-[10px] font-bold text-slate-600 bg-surface-800 px-1.5 py-0.5 rounded" id="layer-count">0</span>
+						<i class="fa-solid fa-gear text-blue-400 text-xs"></i>
+						<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" data-i18n="settings">Ayarlar</span>
 					</div>
-					<div id="layers-list" class="space-y-1 max-h-[180px] overflow-y-auto layer-scroll pr-1">
-						<div class="text-slate-600 text-[11px] text-center py-3 italic" data-i18n="noSvgLoaded">SVG yüklenmedi</div>
-					</div>
-				</div>
-			</div>
+					<div class="space-y-2.5">
+						<label class="flex items-center gap-2.5 cursor-pointer text-[11px] text-slate-300 hover:text-slate-100 transition">
+							<input type="checkbox" id="keep-cutter" class="w-3.5 h-3.5 rounded">
+							<span data-i18n="keepCutterAfterPunch">Delikten sonra kesiciyi koru</span>
+						</label>
+						<label class="flex items-center gap-2.5 cursor-pointer text-[11px] text-slate-300 hover:text-slate-100 transition">
+							<input type="checkbox" id="allow-movement" checked class="w-3.5 h-3.5 rounded">
+							<span data-i18n="allowDragSelected">Seçilen şekli sürükleyebil</span>
+						</label>
 
-			<div class="px-4 py-3 border-t border-surface-800/60 bg-surface-900/80">
-				<div class="flex items-start gap-2 text-[10px] text-slate-600 leading-relaxed">
-					<i class="fa-solid fa-circle-info text-blue-500/60 mt-0.5 text-xs"></i>
-					<span data-i18n="zoomTip">Çift parmakla sıkıştırarak <strong>Zoom</strong> yapabilir, El Aracı seçiliyken sürükleyerek <strong>pürüzsüz kaydırabilirsiniz</strong>.</span>
-				</div>
-			</div>
-		</aside>
-
-		<main class="flex-1 flex flex-col relative overflow-hidden">
-			
-			<div class="absolute top-4 left-4 z-10 flex items-center gap-2">
-				<div class="glass-panel border border-surface-700/50 rounded-xl p-1 flex items-center gap-0.5 shadow-xl shadow-black/20">
-					<button id="tool-select" onclick="setCanvasTool('select')" class="tool-btn active p-2.5 rounded-lg text-sm flex items-center gap-1.5 font-medium" data-i18n-title="selectAndMove">
-						<i class="fa-solid fa-arrow-pointer"></i>
-						<span class="hidden xl:inline text-xs" data-i18n="select">Seçim</span>
-					</button>
-					<button id="tool-pan" onclick="setCanvasTool('pan')" class="tool-btn p-2.5 rounded-lg text-sm text-slate-400 flex items-center gap-1.5 font-medium" data-i18n-title="panCanvas">
-						<i class="fa-solid fa-hand"></i>
-						<span class="hidden xl:inline text-xs" data-i18n="handTool">El Aracı</span>
-					</button>
-				</div>
-
-				<div class="glass-panel border border-surface-700/50 rounded-xl p-1 flex items-center gap-0.5 shadow-xl shadow-black/20">
-					<button id="btn-undo" onclick="undo()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition disabled:opacity-25" data-i18n-title="undo" disabled>
-						<i class="fa-solid fa-rotate-left text-sm"></i>
-					</button>
-					<button id="btn-redo" onclick="redo()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition disabled:opacity-25" data-i18n-title="redo" disabled>
-						<i class="fa-solid fa-rotate-right text-sm"></i>
-					</button>
-					<div class="w-px h-5 bg-surface-700/60 mx-1"></div>
-					<button onclick="zoomIn()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition">
-						<i class="fa-solid fa-plus text-sm"></i>
-					</button>
-					<button onclick="zoomOut()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition">
-						<i class="fa-solid fa-minus text-sm"></i>
-					</button>
-				</div>
-
-				<button onclick="requestDeleteActiveShape()" class="glass-panel border border-red-900/40 rounded-xl p-2.5 px-3.5 text-red-400 hover:text-red-300 hover:border-red-700/50 shadow-xl shadow-black/20 transition flex items-center gap-1.5 text-xs font-semibold" data-i18n-title="deleteSelectedShape">
-					<i class="fa-solid fa-trash-can text-sm"></i>
-					<span class="hidden xl:inline" data-i18n="deleteLayer">Katmanı Sil</span>
-				</button>
-			</div>
-
-			<div id="drop-zone-overlay" class="absolute inset-0 bg-blue-600/5 border-[3px] border-dashed border-blue-500/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
-				<div class="glass-panel p-10 rounded-2xl border border-surface-700/60 shadow-2xl flex flex-col items-center gap-4 text-center max-w-xs animate-scale-in">
-					<div class="w-16 h-16 bg-blue-500/15 text-blue-400 rounded-2xl flex items-center justify-center text-2xl">
-						<i class="fa-solid fa-cloud-arrow-down"></i>
-					</div>
-					<div>
-						<h3 class="text-base font-bold text-white" data-i18n="dropHere">Buraya Bırakın</h3>
-						<p class="text-xs text-slate-400 mt-1.5" data-i18n="dropHint">SVG dosyasını tuvale eklemek için bırakın.</p>
+						<!-- ===== YENİ EKLENEN: Delme Derinliği ===== -->
+						<div class="border-t border-surface-700/40 pt-2.5 mt-2.5">
+							<div class="flex items-center gap-2 mb-2">
+								<i class="fa-solid fa-arrow-down-through-line text-red-400 text-[10px]"></i>
+								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide" data-i18n="punchDepth">Delme Derinliği</span>
+							</div>
+							<select id="punch-depth-mode" onchange="onPunchDepthModeChange()" class="w-full bg-surface-800 border border-surface-700/60 text-slate-200 text-[11px] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/40 cursor-pointer transition mb-2">
+								<option value="single" data-i18n="depthSingle">Sadece bir alt katman (varsayılan)</option>
+								<option value="untilLayer" data-i18n="depthUntilLayer">Belirli katmana kadar del</option>
+								<option value="throughAll" data-i18n="depthThroughAll">Şeffaf arkaplana kadar del (tümü)</option>
+							</select>
+							<div id="punch-depth-layer-selector" class="hidden">
+								<select id="punch-depth-target-layer" class="w-full bg-surface-800 border border-surface-700/60 text-slate-200 text-[11px] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 cursor-pointer transition">
+									<option value="" data-i18n="depthSelectTarget">-- Hedef katman seçin --</option>
+								</select>
+								<p class="text-[9px] text-slate-600 mt-1 leading-relaxed" data-i18n="depthUntilHint">
+									Kesici, taban şekilden bu katmana kadar (dahil) tüm şekilleri delecektir.
+								</p>
+							</div>
+							<div id="punch-depth-throughall-hint" class="hidden">
+								<p class="text-[9px] text-amber-500/80 mt-1 leading-relaxed flex items-start gap-1.5">
+									<i class="fa-solid fa-triangle-exclamation mt-0.5 text-[8px]"></i>
+									<span data-i18n="depthThroughAllHint">Kesici, altındaki TÜM katmanları delecektir. Şeffaf arkaplan görünecektir.</span>
+								</p>
+							</div>
+						</div>
+						<!-- ===== YENİ EKLENEN SON ===== -->
 					</div>
 				</div>
-			</div>
 
-			<div class="flex-1 canvas-area relative">
-				<canvas id="paper-canvas" class="w-full h-full block cursor-default"></canvas>
-			</div>
+				<div class="px-4 py-3 border-t border-surface-800/60 bg-surface-900/80">
+					<div class="flex items-start gap-2 text-[10px] text-slate-600 leading-relaxed">
+						<i class="fa-solid fa-circle-info text-blue-500/60 mt-0.5 text-xs"></i>
+						<span data-i18n="zoomTip">Çift parmakla sıkıştırarak <strong>Zoom</strong> yapabilir, El Aracı seçiliyken sürükleyerek <strong>pürüzsüz kaydırabilirsiniz</strong>.</span>
+					</div>
+				</div>
+			</aside>
 
-			<div class="status-bar h-8 px-4 flex items-center justify-between shrink-0">
-				<div class="flex items-center gap-3 text-[10px] font-mono text-slate-500">
-					<span id="canvas-zoom-indicator" class="text-slate-400">Zoom: %100</span>
-					<span class="text-surface-700">•</span>
-					<span id="canvas-status-tip" class="text-slate-500 truncate max-w-[400px]" data-i18n="statusTipDefault">Başlamak için şablon seçin veya SVG yükleyin</span>
-				</div>
-				<div class="hidden md:flex items-center gap-2 text-[10px] text-slate-600">
-					<span class="px-1.5 py-0.5 bg-surface-800/60 rounded text-slate-500 font-medium">Paper.js</span>
-					<span class="px-1.5 py-0.5 bg-surface-800/60 rounded text-slate-500 font-medium">SVG</span>
-				</div>
-			</div>
-		</main>
-	</div>
+			<main class="flex-1 flex flex-col relative overflow-hidden">
 
-	<div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-		<div class="bg-surface-900 border border-surface-700/60 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl shadow-black/40 transition duration-200 scale-95 opacity-0" id="delete-modal-card">
-			<div class="p-6">
-				<div class="w-11 h-11 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center text-lg mb-4 border border-red-500/20">
-					<i class="fa-solid fa-trash-can"></i>
+				<div class="absolute top-4 left-4 z-10 flex items-center gap-2">
+					<div class="glass-panel border border-surface-700/50 rounded-xl p-1 flex items-center gap-0.5 shadow-xl shadow-black/20">
+						<button id="tool-select" onclick="setCanvasTool('select')" class="tool-btn active p-2.5 rounded-lg text-sm flex items-center gap-1.5 font-medium" data-i18n-title="selectAndMove">
+							<i class="fa-solid fa-arrow-pointer"></i>
+							<span class="hidden xl:inline text-xs" data-i18n="select">Seçim</span>
+						</button>
+						<button id="tool-pan" onclick="setCanvasTool('pan')" class="tool-btn p-2.5 rounded-lg text-sm text-slate-400 flex items-center gap-1.5 font-medium" data-i18n-title="panCanvas">
+							<i class="fa-solid fa-hand"></i>
+							<span class="hidden xl:inline text-xs" data-i18n="handTool">El Aracı</span>
+						</button>
+					</div>
+
+					<div class="glass-panel border border-surface-700/50 rounded-xl p-1 flex items-center gap-0.5 shadow-xl shadow-black/20">
+						<button id="btn-undo" onclick="undo()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition disabled:opacity-25" data-i18n-title="undo" disabled>
+							<i class="fa-solid fa-rotate-left text-sm"></i>
+						</button>
+						<button id="btn-redo" onclick="redo()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition disabled:opacity-25" data-i18n-title="redo" disabled>
+							<i class="fa-solid fa-rotate-right text-sm"></i>
+						</button>
+						<div class="w-px h-5 bg-surface-700/60 mx-1"></div>
+						<button onclick="zoomIn()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition">
+							<i class="fa-solid fa-plus text-sm"></i>
+						</button>
+						<button onclick="zoomOut()" class="tool-btn p-2.5 rounded-lg text-slate-400 hover:text-white transition">
+							<i class="fa-solid fa-minus text-sm"></i>
+						</button>
+					</div>
+
+					<button onclick="requestDeleteActiveShape()" class="glass-panel border border-red-900/40 rounded-xl p-2.5 px-3.5 text-red-400 hover:text-red-300 hover:border-red-700/50 shadow-xl shadow-black/20 transition flex items-center gap-1.5 text-xs font-semibold" data-i18n-title="deleteSelectedShape">
+						<i class="fa-solid fa-trash-can text-sm"></i>
+						<span class="hidden xl:inline" data-i18n="deleteLayer">Katmanı Sil</span>
+					</button>
 				</div>
-				<h3 class="text-base font-bold text-white" data-i18n="deleteLayerTitle">Katmanı Sil?</h3>
-				<p class="text-slate-400 text-xs mt-2 leading-relaxed" id="delete-modal-msg" data-i18n="deleteLayerMsg">Seçili katman tamamen silinecektir. Bu işlemi geri alabilirsiniz.</p>
-			</div>
-			<div class="bg-surface-950/50 px-6 py-4 flex justify-end gap-2.5 border-t border-surface-800/60">
-				<button onclick="closeDeleteModal(false)" class="px-4 py-2 bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs font-semibold rounded-lg transition border border-surface-700/50" data-i18n="cancel">Vazgeç</button>
-				<button onclick="closeDeleteModal(true)" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-red-600/20 transition" data-i18n="delete">Sil</button>
+
+				<div id="drop-zone-overlay" class="absolute inset-0 bg-blue-600/5 border-[3px] border-dashed border-blue-500/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+					<div class="glass-panel p-10 rounded-2xl border border-surface-700/60 shadow-2xl flex flex-col items-center gap-4 text-center max-w-xs animate-scale-in">
+						<div class="w-16 h-16 bg-blue-500/15 text-blue-400 rounded-2xl flex items-center justify-center text-2xl">
+							<i class="fa-solid fa-cloud-arrow-down"></i>
+						</div>
+						<div>
+							<h3 class="text-base font-bold text-white" data-i18n="dropHere">Buraya Bırakın</h3>
+							<p class="text-xs text-slate-400 mt-1.5" data-i18n="dropHint">
+								SVG dosyasını tuvale eklemek için bırakın.
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="flex-1 canvas-area relative">
+					<canvas id="paper-canvas" class="w-full h-full block cursor-default"></canvas>
+				</div>
+
+				<div class="status-bar h-8 px-4 flex items-center justify-between shrink-0">
+					<div class="flex items-center gap-3 text-[10px] font-mono text-slate-500">
+						<span id="canvas-zoom-indicator" class="text-slate-400">Zoom: %100</span>
+						<span class="text-surface-700">•</span>
+						<span id="canvas-status-tip" class="text-slate-500 truncate max-w-[400px]" data-i18n="statusTipDefault">Başlamak için şablon seçin veya SVG yükleyin</span>
+					</div>
+					<div class="hidden md:flex items-center gap-2 text-[10px] text-slate-600">
+						<span class="px-1.5 py-0.5 bg-surface-800/60 rounded text-slate-500 font-medium">Paper.js</span>
+						<span class="px-1.5 py-0.5 bg-surface-800/60 rounded text-slate-500 font-medium">SVG</span>
+					</div>
+				</div>
+			</main>
+		</div>
+
+		<div id="delete-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+			<div class="bg-surface-900 border border-surface-700/60 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl shadow-black/40 transition duration-200 scale-95 opacity-0" id="delete-modal-card">
+				<div class="p-6">
+					<div class="w-11 h-11 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center text-lg mb-4 border border-red-500/20">
+						<i class="fa-solid fa-trash-can"></i>
+					</div>
+					<h3 class="text-base font-bold text-white" data-i18n="deleteLayerTitle">Katmanı Sil?</h3>
+					<p class="text-slate-400 text-xs mt-2 leading-relaxed" id="delete-modal-msg" data-i18n="deleteLayerMsg">
+						Seçili katman tamamen silinecektir. Bu işlemi geri alabilirsiniz.
+					</p>
+				</div>
+				<div class="bg-surface-950/50 px-6 py-4 flex justify-end gap-2.5 border-t border-surface-800/60">
+					<button onclick="closeDeleteModal(false)" class="px-4 py-2 bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs font-semibold rounded-lg transition border border-surface-700/50" data-i18n="cancel">Vazgeç</button>
+					<button onclick="closeDeleteModal(true)" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-red-600/20 transition" data-i18n="delete">Sil</button>
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<div id="toast-container" class="fixed bottom-12 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+		<div id="toast-container" class="fixed bottom-12 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
-	<script src="i18n.js"></script>
-	<script src="script.js"></script>
-</body>
+		<script src="i18n.js"></script>
+		<script src="script.js"></script>
+	</body>
 </html>
