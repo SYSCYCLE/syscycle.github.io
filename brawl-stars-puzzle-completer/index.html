@@ -1,783 +1,141 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="dark">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>Piramit Puzzle Çözücü</title>
-	<style>
-		:root {
-			--bg: #303030;
-			--panel: #000;
-			--empty: #241b2e;
-			--acc: #336699
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Brawl Stars - Etkinlik Sona Erdi</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Rubik:wght@600;800;900&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						brawl: ['Fredoka',
+							'Rubik',
+							'sans-serif'],
+						sans: ['Rubik',
+							'sans-serif'],
+					},
+					colors: {
+						brawl: {
+							purple: '#1c0a35',
+							darkPurple: '#0d041a',
+							yellow: '#ffd000',
+							red: '#ff2a2a',
+							green: '#28d800'
+						}
+					}
+				}
+			}
 		}
-		.cell {
-			-webkit-tap-highlight-color: transparent;
-			transition: 300ms all ease;
-		}
-		.cell:hover {
-			opacity: 0.4;
-			transition: 300ms all ease;
-		}
-		body {
-			margin: 0;
-			font-family: system-ui,Segoe UI,Arial;
-			background: var(--bg);
-			color: #fff;
-			padding: 14px
-		}
-		h1 {
-			font-size: 20px;
-			text-align: center;
-			margin: 6px 0 14px
-		}
-		.wrap {
-			display: flex;
-			gap: 16px;
-			justify-content: center;
-			flex-wrap: wrap
-		}
-		.panel {
-			background: var(--panel);
-			padding: 12px;
-			border-radius: 14px;
-			max-width: 340px
-		}
-		.panel h2 {
-			font-size: 13px;
-			letter-spacing: 1px;
-			text-align: center;
-			margin: 4px 0 10px;
-			color: var(--acc)
-		}
-		#ref, #board {
-			width: 300px;
-			height: 300px;
-			display: grid;
-			grid-template-columns: repeat(4,1fr);
-			gap: 4px;
-			background: #1c1424;
-			padding: 6px;
-			border-radius: 8px
-		}
+	</script>
 
-		.cell {
-			border-radius: 6px;
-			overflow: hidden;
-			cursor: pointer;
-			position: relative;
-			background: #d9a2ab;
-			will-change: transform;
-			user-select: none
+	<style>
+		.text-brawl-stroke {
+			-webkit-text-stroke: 3px #000000;
+			paint-order: stroke fill;
 		}
-		.cell.empty {
-			background: var(--empty)
+		.text-brawl-shadow {
+			text-shadow: 4px 5px 0px #000000;
 		}
-		.cell img {
-			display: block;
-			width: 100%;
-			height: 100%;
-			object-fit: cover;
-			pointer-events: none
+		.brawl-border {
+			border: 5px solid #000000;
 		}
-		.cell .no {
-			position: absolute;
-			top: 2px;
-			left: 5px;
-			font-size: 11px;
-			font-weight: 700;
-			color: #fff;
-			text-shadow: 0 0 4px #000;
-			pointer-events: none
+		.brawl-button {
+			transition: transform 0.1s ease, box-shadow 0.1s ease;
+			box-shadow: 0 7px 0 #000;
 		}
-		.btns {
-			display: flex;
-			gap: 8px;
-			justify-content: center;
-			margin-top: 12px;
-			flex-wrap: wrap
+		.brawl-button:active {
+			transform: translateY(4px);
+			box-shadow: 0 3px 0 #000;
 		}
-		button {
-			background: var(--acc);
-			border: 0;
-			border-radius: 10px;
-			padding: 10px 16px;
-			font-weight: 700;
-			cursor: pointer;
-			font-size: 14px
+		.bs-stripes {
+			background-color: #0d041a;
+			background-image: repeating-linear-gradient(
+			-45deg,
+			rgba(255, 255, 255, 0.03),
+			rgba(255, 255, 255, 0.03) 25px,
+			transparent 25px,
+			transparent 50px
+			);
 		}
-		button.sec {
-			background: #5a4a70;
-			color: #fff
+		@keyframes bounceSlow {
+			0%, 100% {
+				transform: translateY(0);
+			}
+			50% {
+				transform: translateY(-10px);
+			}
 		}
-		.hint {
-			font-size: 12px;
-			color: #cfc3de;
-			line-height: 1.45
-		}
-		#stepsPanel {
-			max-width: 680px;
-			margin: 16px auto;
-			background: var(--panel);
-			border-radius: 14px;
-			padding: 12px;
-			display: none
-		}
-		#steps {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 6px;
-			margin: 10px 0
-		}
-		.step {
-			background: #5a4a70;
-			border-radius: 8px;
-			padding: 6px 9px;
-			font-size: 13px;
-			font-weight: 600
-		}
-		.step b {
-			color: var(--acc)
-		}
-		#picker {
-			position: fixed;
-			inset: 0;
-			background: #000c;
-			display: none;
-			align-items: center;
-			justify-content: center;
-			z-index: 9
-		}
-		#picker .box {
-			background: var(--panel);
-			padding: 14px;
-			border-radius: 14px
-		}
-		#picker .grid {
-			display: grid;
-			grid-template-columns: repeat(4,70px);
-			gap: 6px
-		}
-		#picker .cell {
-			width: 70px;
-			height: 70px
-		}
-		.hl {
-			outline: 3px solid var(--acc)
-		}
-		.cell.dragging {
-			opacity: 0.4;
-		}
-		.cell.drag-over {
-			outline: 2px dashed var(--acc);
-		}
-		.input-box {
-			background: var(--empty);
-			padding: 10px;
-			border-radius: 8px;
-			margin-bottom: 12px;
-			border: 1px solid #5a4a70;
-		}
-		.input-box label {
-			display: block;
-			font-size: 11px;
-			color: var(--acc);
-			margin-bottom: 6px;
-			font-weight: 600;
-		}
-		.input-box input {
-			width: 100%;
-			box-sizing: border-box;
-			background: var(--panel);
-			border: 1px solid #5a4a70;
-			border-radius: 6px;
-			padding: 8px;
-			color: #fff;
-			font-family: monospace;
-			font-size: 13px;
-			text-align: center;
-		}
-		.input-box input:focus {
-			outline: 1px solid var(--acc);
-		}
-		.input-box button {
-			width: 100%;
-			margin-top: 6px;
-			padding: 6px;
-			font-size: 11px;
-			background: #5a4a70;
-			color: #fff;
-		}
-		.input-box button:hover {
-			background: #6e5b87;
+		.animate-bounce-slow {
+			animation: bounceSlow 2s infinite ease-in-out;
 		}
 	</style>
 </head>
-<body>
-	<h1>🏺 PİRAMİT PUZZLE ÇÖZÜCÜ</h1>
-	<div class="wrap">
-		<div class="panel">
-			<h2>TAM HALİ (REFERANS)</h2>
-			<div id="ref"></div>
-			<p class="hint">
-				Karolar 1‑15 numaralı (1=sol üst … 15=alt sıra sağ). Boş en sonda bitecek.
-			</p>
-		</div>
-		<div class="panel">
-			<h2>ŞU ANKİ HALİ (SENİN TAHTAN)</h2>
-			<div class="input-box">
-				<label for="seqInput">SIRA TANIMLA (Boşluğu 0 veya _ ile belirtin):</label>
-				<input type="text" id="seqInput" placeholder="Örn: 14,2,3,4,1,5,9,7,8,6,11,12,13,10,15,_">
-				<button id="applySeqBtn">🎯 Sırayı Uygula</button>
-			</div>
+<body class="bg-brawl-darkPurple text-white font-sans antialiased bs-stripes min-h-screen flex items-center justify-center p-4 overflow-hidden relative select-none">
 
-			<div id="board"></div>
-			<div class="btns">
-				<button id="solveBtn">🧩 ÇÖZ</button><button id="resetBtn" class="sec">↺ Sıfırla</button>
+	<canvas id="starCanvas" class="absolute inset-0 pointer-events-none z-0 opacity-50"></canvas>
+
+	<main class="relative z-10 w-full max-w-lg bg-gradient-to-b from-brawl-purple to-brawl-darkPurple rounded-3xl brawl-border p-8 text-center shadow-2xl flex flex-col items-center gap-6">
+
+		<div class="relative animate-bounce-slow">
+			<div class="w-24 h-24 bg-brawl-red rounded-3xl brawl-border flex items-center justify-center text-white text-5xl shadow-xl rotate-3">
+				<i class="fa-solid fa-lock"></i>
 			</div>
-			<p class="hint">
-				Parçaları <b>basılı tutup sürükleyerek</b> veya tıklayarak yerlerini kolayca değiştirebilirsiniz.
-			</p>
-		</div>
-	</div>
-	<div id="stepsPanel">
-		<h2 id="stepsTitle" style="color:var(--acc);margin:0"></h2>
-		<div id="steps"></div>
-		<div class="btns">
-			<button id="playBtn">▶ Animasyonla İzle</button>
-			<button id="copyBtn" class="sec">📋 Kopyala</button>
-			<button id="recordBtn" class="sec" style="background:#b83b5e; color:#fff">🎥 Videoyu İndir</button>
-		</div>
-	</div>
-	<div id="picker">
-		<div class="box">
-			<h2 style="color:var(--acc)">KAROYU SEÇ</h2><div class="grid" id="pickGrid"></div>
-			<div class="btns">
-				<button class="sec" id="closePick">Kapat</button>
+			<div class="absolute -bottom-2 -right-2 bg-brawl-yellow text-black font-brawl text-xs px-3 py-1 rounded-full brawl-border font-extrabold uppercase">
+				KAPANDI
 			</div>
 		</div>
-	</div>
+
+		<div class="space-y-2">
+			<h1 class="font-brawl font-extrabold text-4xl sm:text-5xl text-brawl-yellow text-brawl-stroke text-brawl-shadow tracking-wider leading-tight">
+				ETKİNLİK SONA ERDİ
+			</h1>
+		</div>
+
+	</main>
 
 	<script>
-		const SVG_FOLDER = "svgs/";
-		const tileSVG = t=> {
-			const fileNum = (t === 0) ? 16: t;
-			return `<img src="${SVG_FOLDER}${fileNum}.svg" draggable="false" alt="${fileNum}">`;
-		};
+		const canvas = document.getElementById('starCanvas');
+		const ctx = canvas.getContext('2d');
+		let stars = [];
 
-		let START = [14, 2, 3, 4, 1, 5, 9, 7, 8, 6, 11, 12, 13, 10, 15, 0];
-		let state = START.slice(), solution = null, solveStart = null, playTimer = null, stepsText = "";
-
-		const $ = id=>document.getElementById(id);
-		const ED = [["U", -4], ["D", 4], ["L", -1], ["R", 1]], OPP = {
-			U: "D",
-			D: "U",
-			L: "R",
-			R: "L"
-		};
-		const ARROW = {
-			U: "⬆️ YUKARI",
-			D: "⬇️ AŞAĞI",
-			L: "⬅️ SOLA",
-			R: "➡️ SAĞA"
-		};
-
-		let draggedIdx = null;
-		let touchStartIdx = null;
-
-		const images = {};
-		let imagesLoaded = false;
-
-		function renderRef() {
-			const r = $("ref");
-			r.innerHTML = "";
-			const refOrder = [...Array(15).keys()].map(k => k+1).concat(0);
-			refOrder.forEach(t => {
-				const d = document.createElement("div");
-				d.className = "cell" + (t ? "": " empty");
-				d.innerHTML = tileSVG(t) + (t ? `<span class="no">${t}</span>`: "");
-				r.appendChild(d);
-			});
+		function resizeCanvas() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			stars = Array.from({
+				length: 30
+			}, () => ({
+					x: Math.random() * canvas.width,
+					y: Math.random() * canvas.height,
+					size: Math.random() * 3 + 1,
+					speedY: (Math.random() * 0.3 + 0.1) * -1,
+					color: ['#ffd000', '#ff2a2a', '#ffffff'][Math.floor(Math.random() * 3)]
+				}));
 		}
 
-		function render(animate = true) {
-			const b = $("board");
-			const rects = {};
-
-			if (animate) {
-				b.querySelectorAll('.cell').forEach(cell => {
-					const num = cell.querySelector('.no')?.textContent;
-					if (num) rects[num] = cell.getBoundingClientRect();
-				});
-			}
-
-			b.innerHTML = "";
-			state.forEach((t, i)=> {
-				const d = document.createElement("div");
-				d.className = "cell"+(t?"": " empty");
-				d.draggable = true;
-				d.innerHTML = tileSVG(t) + (t ? `<span class="no">${t}</span>`: "");
-
-				d.addEventListener('dragstart', (e) => {
-					draggedIdx = i;
-					d.classList.add('dragging');
-				});
-
-				d.addEventListener('dragend', () => {
-					d.classList.remove('dragging');
-					b.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
-					draggedIdx = null;
-				});
-
-				d.addEventListener('dragenter', (e) => {
-					if (draggedIdx !== null && draggedIdx !== i) {
-						d.classList.add('drag-over');
-					}
-				});
-
-				d.addEventListener('dragleave',
-					() => {
-						d.classList.remove('drag-over');
-					});
-
-				d.addEventListener('dragover',
-					(e) => {
-						e.preventDefault();
-					});
-
-				d.addEventListener('drop',
-					(e) => {
-						e.preventDefault();
-						d.classList.remove('drag-over');
-						if (draggedIdx !== null && draggedIdx !== i) {
-							const temp = state[draggedIdx];
-							state[draggedIdx] = state[i];
-							state[i] = temp;
-							render();
-							clearSteps();
-						}
-					});
-
-				d.addEventListener('touchstart',
-					(e) => {
-						touchStartIdx = i;
-					},
-					{
-						passive: true
-					});
-
-				d.addEventListener('touchmove',
-					(e) => {
-						if (touchStartIdx !== null) {
-							e.preventDefault();
-						}
-					},
-					{
-						passive: false
-					});
-
-				d.addEventListener('touchend',
-					(e) => {
-						if (touchStartIdx !== null) {
-							const touch = e.changedTouches[0];
-							const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-							const targetCell = targetEl ? targetEl.closest('.cell'): null;
-							if (targetCell) {
-								const targetIdx = Array.from(b.children).indexOf(targetCell);
-								if (targetIdx !== -1 && targetIdx !== touchStartIdx) {
-									const temp = state[touchStartIdx];
-									state[touchStartIdx] = state[targetIdx];
-									state[targetIdx] = temp;
-									render();
-									clearSteps();
-									e.preventDefault();
-								}
-							}
-						}
-						touchStartIdx = null;
-					});
-
-				d.onclick = (e)=> {
-					openPicker(i);
-				};
-
-				b.appendChild(d);
-			});
-
-			if (animate) {
-				b.querySelectorAll('.cell').forEach(cell => {
-					const num = cell.querySelector('.no')?.textContent;
-					if (num && rects[num]) {
-						const oldRect = rects[num];
-						const newRect = cell.getBoundingClientRect();
-						const dx = oldRect.left-newRect.left;
-						const dy = oldRect.top-newRect.top;
-
-						if (dx !== 0 || dy !== 0) {
-							cell.style.transition = "none";
-							cell.style.transform = `translate(${dx}px, ${dy}px)`;
-							cell.getBoundingClientRect();
-							cell.style.transition = "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)";
-							cell.style.transform = "translate(0, 0)";
-						}
-					}
-				});
-			}
-		}
-
-		function openPicker(i) {
-			const g = $("pickGrid"); g.innerHTML = "";
-			[...Array(15).keys()].map(k => k+1).concat(0).forEach(v => {
-				const d = document.createElement("div"); d.className = "cell"+(v?"": " empty");
-				d.innerHTML = tileSVG(v);
-				d.onclick = ()=> {
-					const j = state.indexOf(v); state[j] = state[i]; state[i] = v;
-					$("picker").style.display = "none"; render(); clearSteps();
-				};
-				g.appendChild(d);
-			});
-			$("picker").style.display = "flex";
-		}
-
-		function solvable(s) {
-			const a = s.filter(Boolean); let inv = 0;
-			for (let i = 0; i < a.length; i++)for (let j = i+1; j < a.length; j++)if (a[i] > a[j])inv++;
-			return (inv+(4-(s.indexOf(0)>>2)))%2 === 1;
-		}
-
-		const H = s=> {
-			let h = 0; for (let i = 0; i < 16; i++) {
-				const t = s[i]; if (!t)continue;
-				h += Math.abs((i>>2)-((t-1)>>2))+Math.abs((i&3)-((t-1)&3));
-			}return h;
-		};
-
-		function solve(s0) {
-			const s = s0.slice(); let e = s.indexOf(0); const path = []; let bound = H(s);
-			const DFS = (g, bound, e, last)=> {
-				const hh = H(s),
-				f = g+hh;
-				if (f > bound)return f; if (hh === 0)return -1; let min = Infinity;
-				for (const[d, de]of ED) {
-					if (last && OPP[d] === last)continue;
-					const ne = e+de; if (ne < 0 || ne > 16-1+1-1 || ne > 15)continue;
-					if (ne < 0 || ne > 15)continue;
-					if ((d === "L" && e%4 === 0) || (d === "R" && e%4 === 3))continue;
-					const t = s[ne]; s[e] = t; s[ne] = 0; path.push({
-						t, d: OPP[d]});
-					const r = DFS(g+1, bound, ne, d);
-					if (r===-1)return -1; if (r < min)min = r;
-					s[ne] = t; s[e] = 0; path.pop();
-				}
-				return min;
-			};
-			while (true) {
-				const t = DFS(0, bound, e, null);
-				if (t===-1)return path; if (!isFinite(t))return null; bound = t;
-			}}
-
-		function clearSteps() {
-			solution = null; $("stepsPanel").style.display = "none"; if (playTimer)clearInterval(playTimer);
-		}
-
-		$("applySeqBtn").onclick = ()=> {
-			const inputVal = $("seqInput").value.trim();
-			if (!inputVal) {
-				alert("Lütfen bir sıra dizilimi girin."); return;
-			}
-
-			const processed = inputVal.replace(/_/g, '0');
-			const numbers = processed.match(/\d+/g);
-
-			if (!numbers) {
-				alert("Girdiğiniz metinde hiç sayı bulunamadı.");
-				return;
-			}
-
-			const newArray = numbers.map(Number);
-
-			const missing = [];
-			const duplicates = [];
-			const counts = {};
-			for (let i = 0; i <= 15; i++) counts[i] = 0;
-
-			newArray.forEach(n => {
-				if (n >= 0 && n <= 15) {
-					counts[n]++;
-				}
-			});
-
-			for (let i = 0; i <= 15; i++) {
-				if (counts[i] === 0) missing.push(i === 0 ? "Boşluk (_ veya 0)": i);
-				if (counts[i] > 1) duplicates.push(i === 0 ? "Boşluk (_ veya 0)": i);
-			}
-
-			if (newArray.length !== 16 || missing.length > 0 || duplicates.length > 0) {
-				let errMsg = `Girdiğiniz dizilim hatalı veya eksik (Şu an ${newArray.length} eleman var, 16 olmalı).\n\n`;
-				if (missing.length > 0) {
-					errMsg += `⚠️ Eksik Olanlar: ${missing.join(", ")}\n`;
-				}
-				if (duplicates.length > 0) {
-					errMsg += `⚠️ Birden Fazla Yazılanlar: ${duplicates.join(", ")}\n`;
-				}
-				alert(errMsg);
-				return;
-			}
-
-			START = newArray.slice();
-			state = START.slice();
-			render(false);
-			clearSteps();
-			alert("Yeni başlangıç sırası başarıyla uygulandı!");
-		};
-
-		$("solveBtn").onclick = ()=> {
-			if (playTimer)clearInterval(playTimer);
-			if (state.every((v, i)=>v === (i < 15?i+1: 0))) {
-				alert("Zaten çözülmüş 🙂"); return;
-			}
-			if (!solvable(state)) {
-				alert("Bu durum çözülemez → bir karo yanlış girilmiş olabilir."); return;
-			}
-			$("solveBtn").textContent = "⏳ Çözülüyor…";
-			setTimeout(()=> {
-				solveStart = state.slice(); solution = solve(state);
-				$("solveBtn").textContent = "🧩 ÇÖZ";
-				$("stepsTitle").textContent = `ÇÖZÜM – ${solution.length} hamle`;
-				const st = $("steps"); st.innerHTML = ""; stepsText = "";
-				solution.forEach((m, k)=> {
-					const sp = document.createElement("span"); sp.className = "step";
-					sp.innerHTML = `${k+1}. <b>${m.t}</b> ${ARROW[m.d]}`; st.appendChild(sp);
-					stepsText += `${k+1}. ${m.t} karosunu ${ARROW[m.d].slice(3)} kaydır\n`;
-				});
-				$("stepsPanel").style.display = "block";
-				$("stepsPanel").scrollIntoView({
-					behavior: "smooth"
-				});
-			}, 30);
-		};
-
-		$("playBtn").onclick = ()=> {
-			if (!solution)return;
-			$("board").scrollIntoView({
-				behavior: "smooth",
-				block: "center"
-			});
-			if (playTimer)clearInterval(playTimer);
-			state = solveStart.slice(); render(false); let k = 0;
-
-			playTimer = setInterval(()=> {
-				if (k >= solution.length) {
-					clearInterval(playTimer); return;
-				}
-				const m = solution[k++],
-				ti = state.indexOf(m.t),
-				ei = state.indexOf(0);
-				state[ei] = m.t; state[ti] = 0; render();
-				$("board").children[ei].classList.add("hl");
-			},
-				2000);
-		};
-
-
-		function preloadImages() {
-			if (imagesLoaded) return Promise.resolve();
-			return new Promise((resolve) => {
-				let loaded = 0;
-				for (let i = 1; i <= 16; i++) {
-					const img = new Image();
-					img.crossOrigin = "anonymous";
-					img.src = `${SVG_FOLDER}${i}.svg`;
-					img.onload = () => {
-						loaded++;
-						if (loaded === 16) {
-							imagesLoaded = true; resolve();
-						}
-					};
-					img.onerror = () => {
-						loaded++;
-						if (loaded === 16) {
-							imagesLoaded = true; resolve();
-						}
-					};
-					images[i] = img;
-				}
-			});
-		}
-
-		const getCoord = (idx) => {
-			const r = idx >> 2;
-			const c = idx & 3;
-			return {
-				x: c * 100, y: r * 100
-			};
-		};
-
-		function drawTile(ctx, val, x, y) {
-			ctx.save();
-			ctx.fillStyle = val === 0 ? "#241b2e": "#d9a2ab";
-			ctx.beginPath();
-			if (typeof ctx.roundRect === "function") {
-				ctx.roundRect(x + 4, y + 4, 92, 92, 6);
-			} else {
-				ctx.rect(x + 4, y + 4, 92, 92);
-			}
-			ctx.fill();
-
-			const imgNum = val === 0 ? 16: val;
-			const img = images[imgNum];
-			if (img && img.complete && img.naturalWidth > 0) {
-				ctx.drawImage(img, x + 4, y + 4, 92, 92);
-			}
-
-			if (val !== 0) {
-				ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
+		function animateStars() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			stars.forEach(star => {
+				star.y += star.speedY;
+				if (star.y < 0) star.y = canvas.height;
+				ctx.fillStyle = star.color;
 				ctx.beginPath();
-				ctx.arc(x + 22, y + 22, 12, 0, Math.PI * 2);
+				ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
 				ctx.fill();
-
-				ctx.fillStyle = "#fff";
-				ctx.font = "bold 11px system-ui";
-				ctx.textAlign = "center";
-				ctx.textBaseline = "middle";
-				ctx.fillText(val, x + 22, y + 22);
-			}
-			ctx.restore();
+			});
+			requestAnimationFrame(animateStars);
 		}
 
-		async function recordVideo() {
-			if (!solution || solution.length === 0) {
-				alert("Lütfen önce bir çözüm hesaplayın.");
-				return;
-			}
-
-			const recordBtn = $("recordBtn");
-			const originalText = recordBtn.textContent;
-			recordBtn.textContent = "⏳ Hazırlanıyor…";
-			recordBtn.disabled = true;
-
-			await preloadImages();
-
-			const canvas = document.createElement("canvas");
-			canvas.width = 400;
-			canvas.height = 400;
-			const ctx = canvas.getContext("2d");
-
-			let stream;
-			try {
-				stream = canvas.captureStream(30);
-			} catch (err) {
-				alert("Tarayıcınız canvas'tan video kaydı almayı desteklemiyor.");
-				recordBtn.textContent = originalText;
-				recordBtn.disabled = false;
-				return;
-			}
-
-			let mimeType = 'video/webm;codecs=vp9';
-			if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
-			if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-
-			const chunks = [];
-			const recorder = new MediaRecorder(stream, {
-				mimeType
-			});
-
-			recorder.ondataavailable = e => {
-				if (e.data.size > 0) chunks.push(e.data);
-			};
-
-			recorder.onstop = () => {
-				const blob = new Blob(chunks, {
-					type: 'video/webm'
-				});
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement("a");
-				a.href = url;
-				a.download = "piramit-puzzle-cozum.webm";
-				a.click();
-				URL.revokeObjectURL(url);
-
-				recordBtn.textContent = originalText;
-				recordBtn.disabled = false;
-			};
-
-			recorder.start();
-
-			const recState = solveStart.slice();
-
-			const drawFullBoard = (movingTileNum = null, movingX = 0, movingY = 0) => {
-				ctx.fillStyle = "#1c1424";
-				ctx.fillRect(0, 0, 400, 400);
-
-				recState.forEach((val, i) => {
-					if (val === movingTileNum) return;
-					const coord = getCoord(i);
-					drawTile(ctx, val, coord.x, coord.y);
-				});
-
-				if (movingTileNum !== null) {
-					drawTile(ctx, movingTileNum, movingX, movingY);
-				}
-			};
-
-			const nextFrame = () => new Promise(requestAnimationFrame);
-
-			const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-
-			const framesPerMove = 25;
-			const holdFrames = 35;
-			drawFullBoard();
-			for (let f = 0; f < 45; f++) await nextFrame();
-
-			for (let step = 0; step < solution.length; step++) {
-				recordBtn.textContent = `⏳ Kaydediliyor (${step + 1}/${solution.length})`;
-
-				const move = solution[step];
-				const currentTileNum = move.t;
-
-				const fromIdx = recState.indexOf(currentTileNum);
-				const toIdx = recState.indexOf(0);
-
-				const fromCoord = getCoord(fromIdx);
-				const toCoord = getCoord(toIdx);
-
-				for (let frame = 1; frame <= framesPerMove; frame++) {
-					const ratio = easeOutCubic(frame / framesPerMove);
-					const curX = fromCoord.x + (toCoord.x - fromCoord.x) * ratio;
-					const curY = fromCoord.y + (toCoord.y - fromCoord.y) * ratio;
-
-					drawFullBoard(currentTileNum, curX, curY);
-					await nextFrame();
-				}
-
-				recState[toIdx] = currentTileNum;
-				recState[fromIdx] = 0;
-
-				drawFullBoard();
-				for (let frame = 0; frame < holdFrames; frame++) await nextFrame();
-			}
-
-			for (let f = 0; f < 60; f++) await nextFrame();
-
-			recorder.stop();
-		}
-		$("recordBtn").onclick = () => {
-			recordVideo().catch(err => {
-				console.error(err);
-				alert("Video kaydı alınırken bir hata oluştu. Lütfen uygulamanın yerel bir web sunucusunda çalıştığından (VS Code Live Server vb.) emin olun.");
-				$("recordBtn").textContent = "🎥 Videoyu İndir";
-				$("recordBtn").disabled = false;
-			});
-		};
-
-		$("copyBtn").onclick = ()=>navigator.clipboard.writeText(stepsText);
-		$("resetBtn").onclick = ()=> {
-			state = START.slice(); render(false); clearSteps();
-		};
-		$("closePick").onclick = ()=>$("picker").style.display = "none";
-
-		renderRef();
-		render(false);
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
+		animateStars();
 	</script>
 </body>
 </html>
